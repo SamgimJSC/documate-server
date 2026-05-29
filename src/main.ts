@@ -2,8 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { TypedConfigService } from './configs/typedConfig.service';
+import { initializeTransactionalContext } from 'typeorm-transactional';
 
 async function bootstrap() {
+  initializeTransactionalContext(); // 트랜잭션 컨텍스트 초기화
+
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(TypedConfigService);
@@ -20,4 +23,5 @@ async function bootstrap() {
 
   console.log(`서버가 ${configService.get('PORT')}번포트로 열렸습니다.`);
 }
+
 bootstrap();
