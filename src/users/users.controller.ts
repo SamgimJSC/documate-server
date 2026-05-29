@@ -3,7 +3,7 @@ import {
   Controller,
   Get,
   Param,
-  ParseIntPipe,
+  ParseUUIDPipe,
   Post,
   Query,
   ValidationPipe,
@@ -26,7 +26,9 @@ export class UsersController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) userId: number) {
+  async findOne(@Param('id', ParseUUIDPipe) userId: string) {
+    console.log(userId);
+
     return this.usersService.getOneUser(userId);
   }
 

@@ -6,4 +6,4 @@ import { TypedConfigService } from './typedConfig.service';
   providers: [TypedConfigService],
   exports: [TypedConfigService],
 })
-export class ConfigModule {}
+export class TypedConfigModule {}
