@@ -8,6 +8,9 @@ export interface UserRepository {
   findAll(query: GetUsersQueryDto): Promise<User[]>;
   findUser(userId: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
-  updateUser(userId: string, updateUserDto: UpdateUserDto): Promise<User | null>;
+  updateUser(
+    userId: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User | null>;
   softDeleteUser(userId: string, withdrawalReason?: string): Promise<boolean>;
 }

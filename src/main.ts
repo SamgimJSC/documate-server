@@ -4,6 +4,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { TypedConfigService } from './configs/typedConfig.service';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import { LoggerInterceptor } from './global/interceptors/logger.interceptor';
+import { GlobalExceptionFilter } from './global/filters/globalException.filter';
+import { ResponseInterceptor } from './global/interceptors/response.interceptor';
 
 async function bootstrap() {
   initializeTransactionalContext(); // 트랜잭션 컨텍스트 초기화
@@ -24,8 +26,10 @@ async function bootstrap() {
     new LoggerInterceptor(),
     // app.get(ServiceLogInterceptor),
     // app.get(TokenRefreshInterceptor),
-    // new ResponseInterceptor(),
+    new ResponseInterceptor(),
   );
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   await app.listen(configService.get('PORT'));
 
