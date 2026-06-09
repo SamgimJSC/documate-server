@@ -1,14 +1,12 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { TypeOrmUserRepository } from './users.repository';
 import { type UserRepository } from './users.interface';
+import { ENotFoundException } from '../global/exceptions/ENotFoundException';
+import { ERROR_CODE } from '../global/constants/errorCode.const';
+import { EConflictException } from '../global/exceptions/EConflictException';
 
 @Injectable()
 export class UsersService {
@@ -23,13 +21,24 @@ export class UsersService {
 
   async getOneUser(userId: string) {
     const user = await this.userRepo.findUser(userId);
-    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    if (!user)
+      throw new ENotFoundException({
+        message: '사용자를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
     return user;
   }
 
   async createUser(createUserDto: CreateUserDto) {
     const existing = await this.userRepo.findByEmail(createUserDto.email);
-    if (existing) throw new ConflictException('이미 사용 중인 이메일입니다.');
+
+    if (existing)
+      throw new EConflictException({
+        message: '이미 사용 중인 이메일입니다.',
+        errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
+      });
 
     return this.userRepo.createUser(createUserDto);
   }
@@ -37,13 +46,23 @@ export class UsersService {
   async updateUser(userId: string, updateUserDto: UpdateUserDto) {
     if (updateUserDto.email) {
       const existing = await this.userRepo.findByEmail(updateUserDto.email);
+
       if (existing && existing.userId !== userId) {
-        throw new ConflictException('이미 사용 중인 이메일입니다.');
+        throw new EConflictException({
+          message: '이미 사용 중인 이메일입니다.',
+          errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
+        });
       }
     }
 
     const updated = await this.userRepo.updateUser(userId, updateUserDto);
-    if (!updated) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    if (!updated)
+      throw new ENotFoundException({
+        message: '사용자를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
     return updated;
   }
 
@@ -52,6 +71,11 @@ export class UsersService {
       userId,
       withdrawalReason,
     );
-    if (!deleted) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    if (!deleted)
+      throw new ENotFoundException({
+        message: '사용자를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
   }
 }
