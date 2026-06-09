@@ -1,14 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
+import { UpdateUserDto } from './dto/updateUser.dto';
 import { TypeOrmUserRepository } from './users.repository';
 import { type UserRepository } from './users.interface';
-
-// const users = [
-//   { id: 1, name: 'john', age: 20 },
-//   { id: 2, name: 'john2', age: 21 },
-//   { id: 3, name: 'john3', age: 22 },
-// ];
+import { ENotFoundException } from '../global/exceptions/ENotFoundException';
+import { ERROR_CODE } from '../global/constants/errorCode.const';
+import { EConflictException } from '../global/exceptions/EConflictException';
 
 @Injectable()
 export class UsersService {
@@ -18,52 +16,66 @@ export class UsersService {
   ) {}
 
   async getUsers(query: GetUsersQueryDto) {
-    // // filter, map, sort, find, forEach
-    // const filteredUser = users.filter((item) => {
-    //   // name이 존재하면 검사
-    //   if (query.name && !item.name.includes(query.name)) {
-    //     return false;
-    //   }
-
-    //   // age가 존재하면 검사
-    //   if (query.age && item.age !== query.age) {
-    //     return false;
-    //   }
-
-    //   return true;
-    // });
-
-    return await this.userRepo.findAll(query);
+    return this.userRepo.findAll(query);
   }
 
   async getOneUser(userId: string) {
-    // const user = users.find((item) => {
-    //   return item.id === userId;
-    // });
-
     const user = await this.userRepo.findUser(userId);
 
-    console.log(user);
+    if (!user)
+      throw new ENotFoundException({
+        message: '사용자를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
 
     return user;
   }
 
   async createUser(createUserDto: CreateUserDto) {
-    // const nextId = users[users.length - 1].id + 1;
+    const existing = await this.userRepo.findByEmail(createUserDto.email);
 
-    // users.push({
-    //   id: nextId,
-    //   name: createUserDto.name,
-    //   age: createUserDto.age,
-    // });
+    if (existing)
+      throw new EConflictException({
+        message: '이미 사용 중인 이메일입니다.',
+        errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
+      });
 
-    // users.push({
-    //   id: nextId,
-    //   ...createUserDto,
-    // });
+    return this.userRepo.createUser(createUserDto);
+  }
 
-    const createdUser = await this.userRepo.createUser(createUserDto);
+  async updateUser(userId: string, updateUserDto: UpdateUserDto) {
+    if (updateUserDto.email) {
+      const existing = await this.userRepo.findByEmail(updateUserDto.email);
 
-    console.log(createdUser);
+      if (existing && existing.userId !== userId) {
+        throw new EConflictException({
+          message: '이미 사용 중인 이메일입니다.',
+          errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
+        });
+      }
+    }
+
+    const updated = await this.userRepo.updateUser(userId, updateUserDto);
+
+    if (!updated)
+      throw new ENotFoundException({
+        message: '사용자를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
+    return updated;
+  }
+
+  async deleteUser(userId: string, withdrawalReason?: string) {
+    const deleted: boolean = await this.userRepo.softDeleteUser(
+      userId,
+      withdrawalReason,
+    );
+
+    if (!deleted)
+      throw new ENotFoundException({
+        message: '사용자를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
   }
 }
