@@ -2,17 +2,25 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
-import { TypeOrmUserRepository } from './users.repository';
-import { type UserRepository } from './users.interface';
+import { TypeOrmUserRepository } from './model/users.repository';
+import { type UserRepository } from './model/users.interface';
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { EConflictException } from '../global/exceptions/EConflictException';
+import { TypeOrmUserSecurityRepository } from './model/user-security.repository';
+import { type UserSecurityRepository } from './model/user-security.interface';
+import { TypeOrmUserSettingsRepository } from './model/user-settings.repository';
+import { type UserSettingsRepository } from './model/user-settings.interface';
 
 @Injectable()
 export class UsersService {
   constructor(
     @Inject(TypeOrmUserRepository)
     private readonly userRepo: UserRepository,
+    @Inject(TypeOrmUserSecurityRepository)
+    private readonly userSecurityRepo: UserSecurityRepository,
+    @Inject(TypeOrmUserSettingsRepository)
+    private readonly userSettingsRepo: UserSettingsRepository,
   ) {}
 
   async getUsers(query: GetUsersQueryDto) {
@@ -31,7 +39,7 @@ export class UsersService {
     return user;
   }
 
-  async createUser(createUserDto: CreateUserDto) {
+  async createUser(createUserDto: CreateUserDto, pinHash?: string) {
     const existing = await this.userRepo.findByEmail(createUserDto.email);
 
     if (existing)
@@ -40,7 +48,15 @@ export class UsersService {
         errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
       });
 
-    return this.userRepo.createUser(createUserDto);
+    const createdUser = await this.userRepo.createUser(createUserDto);
+
+    const { userId } = createdUser;
+
+    await this.userSecurityRepo.createSecurity({ userId, pinHash });
+
+    await this.userSettingsRepo.createSettings({ userId });
+
+    return createdUser;
   }
 
   async updateUser(userId: string, updateUserDto: UpdateUserDto) {
