@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { AuthToken } from './model/auth-token.entity';
 import { AuthTokenRepository } from './auth-token.interface';
-import { CreateAuthTokenDto } from './dto/createAuthToken.dto';
-import { UpdateAuthTokenDto } from './dto/updateAuthToken.dto';
+import { AuthToken } from '../entities/auth-token.entity';
+import { CreateAuthTokenDto } from '../dto/createAuthToken.dto';
+import { UpdateAuthTokenDto } from '../dto/updateAuthToken.dto';
 
 @Injectable()
 export class TypeOrmAuthTokenRepository implements AuthTokenRepository {

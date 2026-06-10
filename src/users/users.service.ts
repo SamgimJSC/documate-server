@@ -11,6 +11,7 @@ import { TypeOrmUserSecurityRepository } from './model/user-security.repository'
 import { type UserSecurityRepository } from './model/user-security.interface';
 import { TypeOrmUserSettingsRepository } from './model/user-settings.repository';
 import { type UserSettingsRepository } from './model/user-settings.interface';
+import { Transactional } from 'typeorm-transactional';
 
 @Injectable()
 export class UsersService {
@@ -39,6 +40,7 @@ export class UsersService {
     return user;
   }
 
+  @Transactional()
   async createUser(createUserDto: CreateUserDto, pinHash?: string) {
     const existing = await this.userRepo.findByEmail(createUserDto.email);
 
@@ -93,5 +95,9 @@ export class UsersService {
         message: '사용자를 찾을 수 없습니다.',
         errorCode: ERROR_CODE.USER_NOT_FOUND,
       });
+  }
+
+  async getUserSecurity(userId: string) {
+    return this.userSecurityRepo.findByUserId(userId);
   }
 }

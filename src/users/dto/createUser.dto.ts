@@ -25,7 +25,7 @@ export class CreateUserDto {
   @IsNotEmpty()
   @Matches(rNickname, {
     message:
-      'name must be 2-8 characters and contain only Korean or English letters',
+      'nickname must be 2-8 characters and contain only Korean or English letters',
   })
   nickname: string;
 

@@ -6,9 +6,15 @@ import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './auth.guard';
 import { JwtModule } from '@nestjs/jwt';
 import { TypedConfigService } from '../configs/typedConfig.service';
+import { TypeOrmAuthTokenRepository } from './model/auth-token.repository';
+import { TypeOrmEmailVerificationRepository } from './model/email-verification.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { EmailVerification } from './entities/email-verification.entity';
+import { AuthToken } from './entities/auth-token.entity';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([EmailVerification, AuthToken]),
     JwtModule.registerAsync({
       inject: [TypedConfigService],
       useFactory: (config: TypedConfigService) => ({
@@ -19,7 +25,13 @@ import { TypedConfigService } from '../configs/typedConfig.service';
     UsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    JwtAuthGuard,
+    TypeOrmEmailVerificationRepository,
+    TypeOrmAuthTokenRepository,
+  ],
   exports: [AuthService, JwtModule, JwtAuthGuard],
 })
 export class AuthModule {}

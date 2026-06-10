@@ -1,17 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { SignUpDto } from './dto/signUp.dto';
 import { type EmailVerificationRepository } from './model/email-verification.interface';
 import { EConflictException } from '../global/exceptions/EConflictException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
-import { SHA256 } from 'crypto-js';
+import * as bcrypt from 'bcrypt';
+import { TypeOrmEmailVerificationRepository } from './model/email-verification.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
-    // private readonly configService: TypedConfigService,
-    private readonly usersService: UsersService,
+    @Inject(TypeOrmEmailVerificationRepository)
     private readonly emailVerificationRepository: EmailVerificationRepository,
+    private readonly usersService: UsersService,
+    // private readonly configService: TypedConfigService,
     // private readonly jwtService: JwtService,
     // private readonly nodeMailer: NodeMailer,
   ) {}
@@ -20,21 +22,21 @@ export class AuthService {
     const { email, nickname, password, emailVerificationId, pinNumber } =
       signUpDto;
 
-    const emailVerification =
-      await this.emailVerificationRepository.findByVerificationId(
-        emailVerificationId,
-      );
+    // const emailVerification =
+    //   await this.emailVerificationRepository.findByVerificationId(
+    //     emailVerificationId,
+    //   );
 
-    if (!emailVerification || emailVerification.isUsed) {
-      throw new EConflictException({
-        message: '이메일 인증이 유효하지 않습니다.',
-        errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
-      });
-    }
+    // if (!emailVerification || emailVerification.isUsed) {
+    //   throw new EConflictException({
+    //     message: '이메일 인증이 유효하지 않습니다.',
+    //     errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
+    //   });
+    // }
 
-    const hashedPw = SHA256(password).toString();
+    const hashedPw = await bcrypt.hash(password, 10);
 
-    const hashedPin = SHA256(pinNumber).toString();
+    const hashedPin = await bcrypt.hash(pinNumber, 10);
 
     const createdUser = await this.usersService.createUser(
       { email, nickname, password: hashedPw },
@@ -108,10 +110,6 @@ export class AuthService {
   //     }
   //   }
 
-  //   async hash(password: string) {
-  //     return bcrypt.hash(password, 10);
-  //   }
-
   //   async signEmailVerificationToken(email: string) {
   //     const payload: JwtPayload = { sub: email };
 
@@ -140,9 +138,5 @@ export class AuthService {
   //         errorCode: ERROR_CODE.INVALID_TOKEN,
   //       });
   //     }
-  //   }
-
-  //   private async verifyPassword(newPw: string, dbPw: string) {
-  //     return await bcrypt.compare(newPw, dbPw);
   //   }
 }

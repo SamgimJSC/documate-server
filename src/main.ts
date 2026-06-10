@@ -6,7 +6,7 @@ import { initializeTransactionalContext } from 'typeorm-transactional';
 import { LoggerInterceptor } from './global/interceptors/logger.interceptor';
 import { GlobalExceptionFilter } from './global/filters/globalException.filter';
 import { ResponseInterceptor } from './global/interceptors/response.interceptor';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   initializeTransactionalContext(); // 트랜잭션 컨텍스트 초기화
