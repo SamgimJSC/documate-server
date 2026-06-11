@@ -1,0 +1,11 @@
+export enum DocumentCategoryCode {
+  CONTRACT = 'CONTRACT',
+  LEASE = 'LEASE',
+  INSURANCE = 'INSURANCE',
+  WARRANTY = 'WARRANTY',
+  PRESCRIPTION = 'PRESCRIPTION',
+  BILL = 'BILL',
+  CERTIFICATE = 'CERTIFICATE',
+  ID_CARD = 'ID_CARD',
+  ETC = 'ETC',
+}

@@ -10,6 +10,12 @@ import { DataSource } from 'typeorm';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { TypedConfigModule } from './configs/config.module';
 import { AuthModule } from './auth/auth.module';
+import { DocumentsModule } from './documents/documents.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ReceiptsModule } from './receipts/receipts.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { PaymentsModule } from './payments/payments.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -45,6 +51,18 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
 
     AuthModule,
+
+    DocumentsModule,
+
+    NotificationsModule,
+
+    ReceiptsModule,
+
+    SubscriptionsModule,
+
+    PaymentsModule,
+
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
