@@ -135,8 +135,6 @@ export class AuthService {
 
     const [dbUser] = await this.usersService.getUsers({ email });
 
-    console.log(dbUser);
-
     if (!dbUser)
       throw new ENotFoundException({
         message: '존재하지 않는 계정입니다.',
@@ -185,6 +183,35 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  async tryRefresh(userId: string): Promise<string> {
+    const [tokenRecord] = await this.authTokenRepository.findByUserId(userId);
+
+    if (!tokenRecord) {
+      throw new EUnauthorizedException({
+        errorCode: ERROR_CODE.INVALID_TOKEN,
+        message: '유효하지 않은 토큰입니다.',
+      });
+    }
+
+    const refreshPayload = this.jwtService.decode(tokenRecord.refreshToken);
+
+    if (!refreshPayload?.exp || Date.now() >= refreshPayload.exp * 1000) {
+      throw new EUnauthorizedException({
+        errorCode: ERROR_CODE.INVALID_TOKEN,
+        message: '유효하지 않은 토큰입니다.',
+      });
+    }
+
+    const payload: JwtPayload = { sub: userId };
+    const newAccessToken = this.jwtService.sign(payload);
+
+    await this.authTokenRepository.updateToken(tokenRecord.tokenId, {
+      accessToken: newAccessToken,
+    });
+
+    return newAccessToken;
+  }
+
   verifyToken(token: string) {
     try {
       this.jwtService.verify(token, {
@@ -199,12 +226,4 @@ export class AuthService {
       });
     }
   }
-
-  //   async signEmailVerificationToken(email: string) {
-  //     const payload: JwtPayload = { sub: email };
-
-  //     return this.jwtService.sign(payload, { expiresIn: '5s' });
-  //   }
-
-  //
 }

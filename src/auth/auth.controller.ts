@@ -34,7 +34,7 @@ export class AuthController {
 
     res.cookie('X-Access-Token', accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: false, // production 에서는 true로 하기
       sameSite: 'lax',
     });
   }

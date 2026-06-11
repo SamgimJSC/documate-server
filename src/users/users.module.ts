@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,10 +10,12 @@ import { TypeOrmUserRepository } from './model/users.repository';
 import { TypeOrmUserSecurityRepository } from './model/user-security.repository';
 import { TypeOrmUserSettingsRepository } from './model/user-settings.repository';
 import { TypeOrmUserConsentRepository } from './model/user-consent.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, UserSecurity, UserSettings, UserConsent]),
+    forwardRef(() => AuthModule),
   ],
   controllers: [UsersController],
   exports: [TypeOrmModule, UsersService],

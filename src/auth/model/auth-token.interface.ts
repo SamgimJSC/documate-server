@@ -6,6 +6,7 @@ export interface AuthTokenRepository {
   createToken(createAuthTokenDto: CreateAuthTokenDto): Promise<AuthToken>;
   findByTokenId(tokenId: string): Promise<AuthToken | null>;
   findByUserId(userId: string): Promise<AuthToken[]>;
+  findByAccessToken(accessToken: string): Promise<AuthToken | null>;
   findByRefreshToken(refreshToken: string): Promise<AuthToken | null>;
   updateToken(
     tokenId: string,

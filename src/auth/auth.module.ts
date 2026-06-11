@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
@@ -20,10 +20,10 @@ import { NodeMailer } from './providors/nodeMailer';
       inject: [TypedConfigService],
       useFactory: (config: TypedConfigService) => ({
         secret: config.get('JWT_SECRET'),
-        signOptions: { expiresIn: '5s' },
+        signOptions: { expiresIn: '1d' },
       }),
     }),
-    UsersModule,
+    forwardRef(() => UsersModule),
   ],
   controllers: [AuthController],
   providers: [

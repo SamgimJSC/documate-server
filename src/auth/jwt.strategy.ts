@@ -5,8 +5,6 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from './types/jwtPayload.type';
 import { Request } from 'express';
 import { UsersService } from '../users/users.service';
-import { UserRole } from '../global/constants/userRole.enum';
-import { UserPlan } from '../global/constants/userPlan.enum';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -18,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => req?.cookies?.['X-Access-Token'],
       ]),
-      ignoreExpiration: false,
+      ignoreExpiration: true,
       secretOrKey: configService.get('JWT_SECRET'),
     });
   }
@@ -32,29 +30,27 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const { sub, exp } = payload;
 
-    console.log('token', sub);
-
     const isExpired = Date.now() >= exp! * 1000;
 
-    if (this.configService.get('NODE_ENV') === 'development') {
-      return {
-        userId: sub,
-        email: 'test@example.com',
-        nickname: 'test-user',
-        realName: 'Test User',
-        profileImgUrl: null,
-        role: UserRole.MEMBER,
-        plan: UserPlan.FREE,
-        storageUsedBytes: '0',
-        storageQuotaBytes: null,
-        isEmailVerified: true,
-        lastLoginAt: null,
-        withdrawalReason: null,
-        deletedAt: null,
-        isDeleted: false,
-        isExpired,
-      };
-    }
+    // if (this.configService.get('NODE_ENV') === 'development') {
+    //   return {
+    //     userId: sub,
+    //     email: 'test@example.com',
+    //     nickname: 'test-user',
+    //     realName: 'Test User',
+    //     profileImgUrl: null,
+    //     role: UserRole.MEMBER,
+    //     plan: UserPlan.FREE,
+    //     storageUsedBytes: '0',
+    //     storageQuotaBytes: null,
+    //     isEmailVerified: true,
+    //     lastLoginAt: null,
+    //     withdrawalReason: null,
+    //     deletedAt: null,
+    //     isDeleted: false,
+    //     isExpired,
+    //   };
+    // }
 
     const user = await this.userService.getOneUser(sub);
 

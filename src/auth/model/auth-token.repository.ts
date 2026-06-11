@@ -29,6 +29,10 @@ export class TypeOrmAuthTokenRepository implements AuthTokenRepository {
     return this.repo.find({ where: { userId } });
   }
 
+  async findByAccessToken(accessToken: string): Promise<AuthToken | null> {
+    return this.repo.findOne({ where: { accessToken } });
+  }
+
   async findByRefreshToken(refreshToken: string): Promise<AuthToken | null> {
     return this.repo.findOne({ where: { refreshToken } });
   }
