@@ -6,6 +6,7 @@ import { initializeTransactionalContext } from 'typeorm-transactional';
 import { LoggerInterceptor } from './global/interceptors/logger.interceptor';
 import { GlobalExceptionFilter } from './global/filters/globalException.filter';
 import { ResponseInterceptor } from './global/interceptors/response.interceptor';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   initializeTransactionalContext(); // 트랜잭션 컨텍스트 초기화
@@ -13,6 +14,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(TypedConfigService);
+
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({
