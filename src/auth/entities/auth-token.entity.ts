@@ -16,14 +16,11 @@ export class AuthToken {
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
+  @Column({ name: 'access_token', type: 'varchar', length: 500 })
+  accessToken: string;
+
   @Column({ name: 'refresh_token', type: 'varchar', length: 500 })
   refreshToken: string;
-
-  @Column({ name: 'device_info', type: 'varchar', length: 200, nullable: true })
-  deviceInfo: string | null;
-
-  @Column({ name: 'expires_at', type: 'timestamptz' })
-  expiresAt: Date;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

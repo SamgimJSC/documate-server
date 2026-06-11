@@ -11,16 +11,26 @@ import crypto from 'crypto';
 import { NodeMailer } from './providors/nodeMailer';
 import { EServiceUnavailableException } from '../global/exceptions/EServiceUnavailableException';
 import { VerifyEmailVerificationDto } from './dto/verifyEmailVerification.dto';
+import { LoginDto } from './dto/login.dto';
+import { ENotFoundException } from '../global/exceptions/ENotFoundException';
+import { EUnauthorizedException } from '../global/exceptions/EUnauthorizedException';
+import { JwtPayload } from './types/jwtPayload.type';
+import { JwtService } from '@nestjs/jwt';
+import { TypedConfigService } from '../configs/typedConfig.service';
+import { type AuthTokenRepository } from './model/auth-token.interface';
+import { TypeOrmAuthTokenRepository } from './model/auth-token.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(TypeOrmEmailVerificationRepository)
     private readonly emailVerificationRepository: EmailVerificationRepository,
+    @Inject(TypeOrmAuthTokenRepository)
+    private readonly authTokenRepository: AuthTokenRepository,
     private readonly usersService: UsersService,
     private readonly nodeMailer: NodeMailer,
-    // private readonly configService: TypedConfigService,
-    // private readonly jwtService: JwtService,
+    private readonly jwtService: JwtService,
+    private readonly configService: TypedConfigService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -120,6 +130,40 @@ export class AuthService {
     return true;
   }
 
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+
+    const [dbUser] = await this.usersService.getUsers({ email });
+
+    console.log(dbUser);
+
+    if (!dbUser)
+      throw new ENotFoundException({
+        message: '존재하지 않는 계정입니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
+    const dbPw = dbUser.password;
+
+    const isValid = await bcrypt.compare(password, dbPw);
+
+    if (!isValid)
+      throw new EUnauthorizedException({
+        message: '비밀번호가 일치하지 않습니다.',
+        errorCode: ERROR_CODE.INVALID_PASSWORD,
+      });
+
+    const { accessToken, refreshToken } = this.signTokens(dbUser.userId);
+
+    await this.authTokenRepository.createToken({
+      userId: dbUser.userId,
+      accessToken,
+      refreshToken,
+    });
+
+    return { accessToken };
+  }
+
   createVerificationCode() {
     return crypto.randomInt(100000, 1000000).toString();
   }
@@ -132,67 +176,35 @@ export class AuthService {
     return expiresAt.getTime() <= Date.now();
   }
 
+  signTokens(userId: string) {
+    const payload: JwtPayload = { sub: userId };
+
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
+
+    return { accessToken, refreshToken };
+  }
+
+  verifyToken(token: string) {
+    try {
+      this.jwtService.verify(token, {
+        secret: this.configService.get('JWT_SECRET'),
+      });
+    } catch (err) {
+      console.error(err);
+
+      throw new EUnauthorizedException({
+        message: '유효한 토큰이 아닙니다.',
+        errorCode: ERROR_CODE.INVALID_TOKEN,
+      });
+    }
+  }
+
   //   async signEmailVerificationToken(email: string) {
   //     const payload: JwtPayload = { sub: email };
 
   //     return this.jwtService.sign(payload, { expiresIn: '5s' });
   //   }
 
-  //   async login(loginDto: LoginDto) {
-  //     const { email, password } = loginDto;
-
-  //     const [dbUser] = await this.userService.findUser({
-  //       where: { email },
-  //       select: {
-  //         userId: true,
-  //         password: true,
-  //       },
-  //     });
-
-  //     if (!dbUser)
-  //       throw new ENotFoundException({
-  //         message: '존재하지 않는 이메일입니다.',
-  //         errorCode: ERROR_CODE.USER_NOT_FOUND,
-  //       });
-
-  //     const dbPw = dbUser.password;
-
-  //     const isValid = await this.verifyPassword(password, dbPw);
-
-  //     if (!isValid)
-  //       throw new EUnauthorizedException({
-  //         message: '비밀번호가 일치하지 않습니다.',
-  //         errorCode: ERROR_CODE.INVALID_PASSWORD,
-  //       });
-
-  //     const { accessToken, refreshToken } = await this.signTokens(dbUser.userId);
-
-  //     await this.userService.setTokens(dbUser.userId, accessToken, refreshToken);
-
-  //     return { accessToken };
-  //   }
-
-  //   async signTokens(userId: string) {
-  //     const payload: JwtPayload = { sub: userId };
-
-  //     const accessToken = this.jwtService.sign(payload);
-  //     const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
-
-  //     return { accessToken, refreshToken };
-  //   }
-
-  //   async verifyToken(token: string) {
-  //     try {
-  //       this.jwtService.verify(token, {
-  //         secret: this.configService.get('JWT_SECRET'),
-  //       });
-  //     } catch (err) {
-  //       console.error(err);
-
-  //       throw new EUnauthorizedException({
-  //         message: '유효한 토큰이 아닙니다.',
-  //         errorCode: ERROR_CODE.INVALID_TOKEN,
-  //       });
-  //     }
-  //   }
+  //
 }

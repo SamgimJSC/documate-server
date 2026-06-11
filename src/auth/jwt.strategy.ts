@@ -30,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const { sub, exp } = payload;
 
-    const isExpired = Date.now() >= exp * 1000;
+    const isExpired = Date.now() >= exp! * 1000;
 
     // TODO: 테스트 유저 따로 처리
 
