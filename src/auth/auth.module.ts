@@ -11,6 +11,7 @@ import { TypeOrmEmailVerificationRepository } from './model/email-verification.r
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailVerification } from './entities/email-verification.entity';
 import { AuthToken } from './entities/auth-token.entity';
+import { NodeMailer } from './providors/nodeMailer';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuthToken } from './entities/auth-token.entity';
   controllers: [AuthController],
   providers: [
     AuthService,
+    NodeMailer,
     JwtStrategy,
     JwtAuthGuard,
     TypeOrmEmailVerificationRepository,

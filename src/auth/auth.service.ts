@@ -6,6 +6,11 @@ import { EConflictException } from '../global/exceptions/EConflictException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import * as bcrypt from 'bcrypt';
 import { TypeOrmEmailVerificationRepository } from './model/email-verification.repository';
+import { SendEmailVerificationDto } from './dto/sendEmailVerification.dto';
+import crypto from 'crypto';
+import { NodeMailer } from './providors/nodeMailer';
+import { EServiceUnavailableException } from '../global/exceptions/EServiceUnavailableException';
+import { VerifyEmailVerificationDto } from './dto/verifyEmailVerification.dto';
 
 @Injectable()
 export class AuthService {
@@ -13,26 +18,26 @@ export class AuthService {
     @Inject(TypeOrmEmailVerificationRepository)
     private readonly emailVerificationRepository: EmailVerificationRepository,
     private readonly usersService: UsersService,
+    private readonly nodeMailer: NodeMailer,
     // private readonly configService: TypedConfigService,
     // private readonly jwtService: JwtService,
-    // private readonly nodeMailer: NodeMailer,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
     const { email, nickname, password, emailVerificationId, pinNumber } =
       signUpDto;
 
-    // const emailVerification =
-    //   await this.emailVerificationRepository.findByVerificationId(
-    //     emailVerificationId,
-    //   );
+    const emailVerification =
+      await this.emailVerificationRepository.findByVerificationId(
+        emailVerificationId,
+      );
 
-    // if (!emailVerification || emailVerification.isUsed) {
-    //   throw new EConflictException({
-    //     message: '이메일 인증이 유효하지 않습니다.',
-    //     errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
-    //   });
-    // }
+    if (!emailVerification || emailVerification.isUsed) {
+      throw new EConflictException({
+        message: '이메일 인증이 유효하지 않습니다.',
+        errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
+      });
+    }
 
     const hashedPw = await bcrypt.hash(password, 10);
 
@@ -45,6 +50,93 @@ export class AuthService {
 
     return createdUser;
   }
+
+  async sendEmailVerification(
+    sendEmailVerificationDto: SendEmailVerificationDto,
+  ) {
+    const { email, purpose } = sendEmailVerificationDto;
+
+    const foundUsers = await this.usersService.getUsers({ email });
+
+    if (foundUsers.length) {
+      throw new EConflictException({
+        message: '이미 존재하는 이메일 입니다.',
+        errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
+      });
+    }
+
+    try {
+      const code = this.createVerificationCode();
+
+      const emailVerification =
+        await this.emailVerificationRepository.createVerification({
+          email,
+          code,
+          purpose,
+          expiresAt: this.getExpiresAt(),
+        });
+
+      await this.nodeMailer.sendEmail({
+        to: email,
+        subject: '[Documate] 회원가입 이메일 인증',
+        code,
+      });
+
+      return { emailVerificationId: emailVerification.verificationId };
+    } catch (err) {
+      console.error(err);
+
+      throw new EServiceUnavailableException({
+        message: '이메일 전송에 실패했습니다.',
+        errorCode: ERROR_CODE.EMAIL_SEND_FAILURE,
+      });
+    }
+  }
+
+  async verifyEmailVerification(
+    verifyEmailVerificationDto: VerifyEmailVerificationDto,
+  ) {
+    const { emailVerificationId, codeNumber } = verifyEmailVerificationDto;
+
+    const verification =
+      await this.emailVerificationRepository.findByVerificationId(
+        emailVerificationId,
+      );
+
+    if (
+      !verification ||
+      verification.isUsed ||
+      this.isExpired(verification.expiresAt) ||
+      verification.code !== codeNumber
+    ) {
+      throw new EConflictException({
+        message: '이메일 인증이 유효하지 않습니다.',
+        errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
+      });
+    }
+
+    await this.emailVerificationRepository.markAsUsed(emailVerificationId);
+
+    return true;
+  }
+
+  createVerificationCode() {
+    return crypto.randomInt(100000, 1000000).toString();
+  }
+
+  getExpiresAt(minutes = 5): Date {
+    return new Date(Date.now() + minutes * 60 * 1000);
+  }
+
+  isExpired(expiresAt: Date): boolean {
+    return expiresAt.getTime() <= Date.now();
+  }
+
+  //   async signEmailVerificationToken(email: string) {
+  //     const payload: JwtPayload = { sub: email };
+
+  //     return this.jwtService.sign(payload, { expiresIn: '5s' });
+  //   }
 
   //   async login(loginDto: LoginDto) {
   //     const { email, password } = loginDto;
@@ -78,42 +170,6 @@ export class AuthService {
   //     await this.userService.setTokens(dbUser.userId, accessToken, refreshToken);
 
   //     return { accessToken };
-  //   }
-
-  //   async emailVerificationSignup(emailVerificationDto: EmailVerificationDto) {
-  //     const { email } = emailVerificationDto;
-
-  //     const [user] = await this.userService.findOneByEmail(email);
-
-  //     if (user) {
-  //       throw new EConflictException({
-  //         message: '이미 존재하는 이메일 입니다.',
-  //         errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
-  //       });
-  //     }
-
-  //     const token = await this.signEmailVerificationToken(email);
-
-  //     try {
-  //       await this.nodeMailer.sendEmail({
-  //         to: email,
-  //         subject: '[솔링북] 회원가입 이메일 인증을 위한 링크입니다.',
-  //         link: `${this.configService.get('BASE_URL')}/signup?t=${token}`,
-  //       });
-  //     } catch (err) {
-  //       console.error(err);
-
-  //       throw new EServiceUnavailableException({
-  //         message: '이메일 전송에 실패했습니다.',
-  //         errorCode: ERROR_CODE.EMAIL_SEND_FAILURE,
-  //       });
-  //     }
-  //   }
-
-  //   async signEmailVerificationToken(email: string) {
-  //     const payload: JwtPayload = { sub: email };
-
-  //     return this.jwtService.sign(payload, { expiresIn: '5s' });
   //   }
 
   //   async signTokens(userId: string) {

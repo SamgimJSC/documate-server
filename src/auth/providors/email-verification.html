@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>이메일 인증</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #f4f6f8;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    "
+  >
+    <table
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      style="background-color: #f4f6f8; padding: 40px 0"
+    >
+      <tr>
+        <td align="center">
+          <table
+            width="560"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              background-color: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            "
+          >
+            <!-- Header -->
+            <tr>
+              <td
+                style="
+                  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+                  padding: 40px 48px;
+                  text-align: center;
+                "
+              >
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: #ffffff;
+                    letter-spacing: -0.5px;
+                  "
+                >
+                  Documate
+                </p>
+                <p
+                  style="
+                    margin: 8px 0 0;
+                    font-size: 14px;
+                    color: rgba(255, 255, 255, 0.75);
+                    letter-spacing: 0.5px;
+                  "
+                >
+                  EMAIL VERIFICATION
+                </p>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding: 48px 48px 40px">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: #111827;
+                  "
+                >
+                  이메일 주소를 인증해 주세요
+                </p>
+                <p
+                  style="
+                    margin: 0 0 32px;
+                    font-size: 15px;
+                    color: #6b7280;
+                    line-height: 1.6;
+                  "
+                >
+                  아래 인증 코드를 입력하면 이메일 인증이 완료됩니다.<br />
+                  코드는 <strong style="color: #374151">5분</strong> 동안
+                  유효합니다.
+                </p>
+
+                <!-- Verification Code -->
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center" style="padding: 8px 0 32px">
+                      <table cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td
+                            style="
+                              display: inline-block;
+                              width: 52px;
+                              height: 64px;
+                              background-color: #eff6ff;
+                              border: 2px solid #3b82f6;
+                              border-radius: 10px;
+                              text-align: center;
+                              vertical-align: middle;
+                              font-size: 32px;
+                              font-weight: 700;
+                              color: #1e40af;
+                              margin: 0 4px;
+                              line-height: 64px;
+                            "
+                          >
+                            {{CODE_1}}
+                          </td>
+                          <td
+                            style="
+                              display: inline-block;
+                              width: 52px;
+                              height: 64px;
+                              background-color: #eff6ff;
+                              border: 2px solid #3b82f6;
+                              border-radius: 10px;
+                              text-align: center;
+                              vertical-align: middle;
+                              font-size: 32px;
+                              font-weight: 700;
+                              color: #1e40af;
+                              margin: 0 4px;
+                              line-height: 64px;
+                            "
+                          >
+                            {{CODE_2}}
+                          </td>
+                          <td
+                            style="
+                              display: inline-block;
+                              width: 52px;
+                              height: 64px;
+                              background-color: #eff6ff;
+                              border: 2px solid #3b82f6;
+                              border-radius: 10px;
+                              text-align: center;
+                              vertical-align: middle;
+                              font-size: 32px;
+                              font-weight: 700;
+                              color: #1e40af;
+                              margin: 0 4px;
+                              line-height: 64px;
+                            "
+                          >
+                            {{CODE_3}}
+                          </td>
+                          <td
+                            style="
+                              width: 16px;
+                              text-align: center;
+                              vertical-align: middle;
+                              font-size: 24px;
+                              font-weight: 300;
+                              color: #9ca3af;
+                              padding: 0 2px;
+                            "
+                          >
+                            &mdash;
+                          </td>
+                          <td
+                            style="
+                              display: inline-block;
+                              width: 52px;
+                              height: 64px;
+                              background-color: #eff6ff;
+                              border: 2px solid #3b82f6;
+                              border-radius: 10px;
+                              text-align: center;
+                              vertical-align: middle;
+                              font-size: 32px;
+                              font-weight: 700;
+                              color: #1e40af;
+                              margin: 0 4px;
+                              line-height: 64px;
+                            "
+                          >
+                            {{CODE_4}}
+                          </td>
+                          <td
+                            style="
+                              display: inline-block;
+                              width: 52px;
+                              height: 64px;
+                              background-color: #eff6ff;
+                              border: 2px solid #3b82f6;
+                              border-radius: 10px;
+                              text-align: center;
+                              vertical-align: middle;
+                              font-size: 32px;
+                              font-weight: 700;
+                              color: #1e40af;
+                              margin: 0 4px;
+                              line-height: 64px;
+                            "
+                          >
+                            {{CODE_5}}
+                          </td>
+                          <td
+                            style="
+                              display: inline-block;
+                              width: 52px;
+                              height: 64px;
+                              background-color: #eff6ff;
+                              border: 2px solid #3b82f6;
+                              border-radius: 10px;
+                              text-align: center;
+                              vertical-align: middle;
+                              font-size: 32px;
+                              font-weight: 700;
+                              color: #1e40af;
+                              margin: 0 4px;
+                              line-height: 64px;
+                            "
+                          >
+                            {{CODE_6}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Copy hint -->
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        background-color: #f9fafb;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 8px;
+                        padding: 14px 20px;
+                      "
+                    >
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 13px;
+                          color: #6b7280;
+                          letter-spacing: 0.3px;
+                        "
+                      >
+                        인증 코드
+                      </p>
+                      <p
+                        style="
+                          margin: 6px 0 0;
+                          font-size: 26px;
+                          font-weight: 700;
+                          color: #1e40af;
+                          letter-spacing: 6px;
+                        "
+                      >
+                        {{VERIFICATION_CODE}}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Divider -->
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="margin: 32px 0"
+                >
+                  <tr>
+                    <td style="border-top: 1px solid #e5e7eb"></td>
+                  </tr>
+                </table>
+
+                <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+                  Documate 회원가입 페이지로 돌아가서 위 코드를 입력해 주세요.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Notice -->
+            <tr>
+              <td style="padding: 0 48px 40px">
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="
+                    background-color: #fef3c7;
+                    border-radius: 8px;
+                    border-left: 4px solid #f59e0b;
+                  "
+                >
+                  <tr>
+                    <td style="padding: 14px 16px">
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 13px;
+                          color: #92400e;
+                          line-height: 1.5;
+                        "
+                      >
+                        본인이 요청하지 않은 경우 이 이메일을 무시하셔도 됩니다.
+                        계정은 안전하게 유지됩니다.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td
+                style="
+                  background-color: #f9fafb;
+                  padding: 24px 48px;
+                  text-align: center;
+                  border-top: 1px solid #e5e7eb;
+                "
+              >
+                <p style="margin: 0 0 4px; font-size: 13px; color: #9ca3af">
+                  이 이메일은 Documate에서 발송되었습니다.
+                </p>
+                <p style="margin: 0; font-size: 12px; color: #d1d5db">
+                  &copy; 2026 Documate. All rights reserved.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

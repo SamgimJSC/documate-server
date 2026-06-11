@@ -1,6 +1,8 @@
 import { Body, Controller, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignUpDto } from './dto/signUp.dto';
+import { SendEmailVerificationDto } from './dto/sendEmailVerification.dto';
+import { VerifyEmailVerificationDto } from './dto/verifyEmailVerification.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -11,6 +13,15 @@ export class AuthController {
     return this.authService.signUp(body);
   }
 
+  @Post('email-verification/send')
+  async sendEmailVerification(@Body() body: SendEmailVerificationDto) {
+    return this.authService.sendEmailVerification(body);
+  }
+
+  @Post('email-verification/verify')
+  async verifyEmailVerification(@Body() body: VerifyEmailVerificationDto) {
+    return this.authService.verifyEmailVerification(body);
+  }
   //   @Post('login')
   //   async login(
   //     @Body() body: LoginDto,
@@ -26,10 +37,5 @@ export class AuthController {
 
   //     // TODO: res양식 잡으면 수정
   //     return {};
-  //   }
-
-  //   @Post('email-verification')
-  //   async emailVerification(@Body() body: EmailVerificationDto) {
-  //     return this.authService.emailVerificationSignup(body);
   //   }
 }
