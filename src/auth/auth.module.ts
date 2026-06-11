@@ -20,7 +20,7 @@ import { NodeMailer } from './providors/nodeMailer';
       inject: [TypedConfigService],
       useFactory: (config: TypedConfigService) => ({
         secret: config.get('JWT_SECRET'),
-        signOptions: { expiresIn: '1d' },
+        signOptions: { expiresIn: '5s' },
       }),
     }),
     UsersModule,
