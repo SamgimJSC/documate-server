@@ -1,16 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from './types/jwtPayload.type';
 import { Request } from 'express';
 import { UsersService } from '../users/users.service';
+import { type AuthTokenRepository } from './model/auth-token.interface';
+import { TypeOrmAuthTokenRepository } from './model/auth-token.repository';
+import { EUnauthorizedException } from '../global/exceptions/EUnauthorizedException';
+import { ERROR_CODE } from '../global/constants/errorCode.const';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly configService: ConfigService,
     private readonly userService: UsersService,
+    @Inject(TypeOrmAuthTokenRepository)
+    private readonly authTokenRepository: AuthTokenRepository,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -53,6 +59,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // }
 
     const user = await this.userService.getOneUser(sub);
+
+    if (!isExpired) {
+      const [tokenRecord] = await this.authTokenRepository.findByUserId(sub);
+      if (!tokenRecord) {
+        throw new EUnauthorizedException({
+          errorCode: ERROR_CODE.INVALID_TOKEN,
+          message: '유효하지 않은 토큰입니다.',
+        });
+      }
+    }
 
     return { ...user, isExpired };
   }
