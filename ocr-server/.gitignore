@@ -347,4 +347,5 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,intellij,python,macos
 
-.env*
+.env
+!.env.example
