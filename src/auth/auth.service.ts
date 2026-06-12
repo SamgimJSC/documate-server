@@ -58,6 +58,8 @@ export class AuthService {
       hashedPin,
     );
 
+    await this.emailVerificationRepository.markAsUsed(emailVerificationId);
+
     return createdUser;
   }
 
@@ -124,8 +126,6 @@ export class AuthService {
         errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
       });
     }
-
-    await this.emailVerificationRepository.markAsUsed(emailVerificationId);
 
     return true;
   }
