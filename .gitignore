@@ -441,3 +441,4 @@ $RECYCLE.BIN/
 
 
 .env*
+!.env.example
