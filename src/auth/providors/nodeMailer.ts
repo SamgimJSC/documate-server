@@ -12,6 +12,8 @@ export class NodeMailer {
   async sendEmail(options: SendEmailOption) {
     const { to, subject, code } = options;
 
+    console.log(this.configService.get('NODE_MAILER_PASS'));
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {

@@ -16,6 +16,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -63,6 +64,8 @@ import { AdminModule } from './admin/admin.module';
     PaymentsModule,
 
     AdminModule,
+
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
