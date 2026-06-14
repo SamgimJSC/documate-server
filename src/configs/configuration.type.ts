@@ -11,6 +11,7 @@ export type EnvConfigType = {
   DB_PASSWORD: string;
   DB_NAME: string;
   DB_SYNCHRONIZE: boolean;
+  FCM_SERVICE_ACCOUNT_PATH: string;
 
   NODE_MAILER_USER: string;
   NODE_MAILER_PASS: string;

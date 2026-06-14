@@ -67,6 +67,10 @@ class EnvironmentVariables {
   @IsBooleanString()
   @IsNotEmpty()
   DB_SYNCHRONIZE: string;
+
+    @IsString()
+  @IsNotEmpty()
+  FCM_SERVICE_ACCOUNT_PATH: string;
 }
 
 export function validate(config: Record<string, unknown>) {
