@@ -15,7 +15,7 @@ import { NotificationsService } from './notifications.service';
 import { CreateNotificationBodyDto } from './dto/createNotificationBody.dto';
 import { RegisterDeviceTokenDto } from './dto/registerDeviceToken.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
-import { DecoUser } from '../global/decorators/reqUser.decorator';
+import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { type ReqUser } from '../global/types/express';
 
 /*
