@@ -17,6 +17,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { UploadsModule } from './uploads/uploads.module';
         `.env.${process.env.NODE_ENV || 'development'}`,
       ],
     }),
-
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [TypedConfigModule],
       inject: [TypedConfigService],
