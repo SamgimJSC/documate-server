@@ -441,3 +441,5 @@ $RECYCLE.BIN/
 
 
 .env*
+
+firebase-service-account.json
