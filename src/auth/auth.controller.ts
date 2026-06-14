@@ -7,8 +7,8 @@ import { LoginDto } from './dto/login.dto';
 import { type Response, type Request } from 'express';
 import { JwtAuthGuard } from './auth.guard';
 import {  ReqUser } from '../global/types/express';
-import { User } from '../users/entities/user.entity';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
+import { User } from '../users/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
