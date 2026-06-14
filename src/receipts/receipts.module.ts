@@ -10,13 +10,20 @@ import { TypeOrmSpendCategoryRepository } from './model/spend-category.repositor
 import { TypeOrmReceiptRepository } from './model/receipt.repository';
 import { TypeOrmReceiptTagRepository } from './model/receipt-tag.repository';
 import { TypeOrmMonthlyReportRepository } from './model/monthly-report.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SpendCategory, Receipt, ReceiptTag, MonthlyReport]),
+    TypeOrmModule.forFeature([
+      SpendCategory,
+      Receipt,
+      ReceiptTag,
+      MonthlyReport,
+    ]),
+    AuthModule, 
   ],
   controllers: [ReceiptsController],
-  exports: [TypeOrmModule, ReceiptsService],
+  exports: [ReceiptsService],
   providers: [
     ReceiptsService,
     TypeOrmSpendCategoryRepository,
