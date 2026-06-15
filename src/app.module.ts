@@ -18,6 +18,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -67,6 +68,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     AdminModule,
 
     UploadsModule,
+
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],

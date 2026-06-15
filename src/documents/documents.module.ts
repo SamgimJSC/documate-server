@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
@@ -19,6 +20,7 @@ import { TypeOrmDocumentFileRepository } from './model/document-file.repository'
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       DocumentCategory,
       Document,
