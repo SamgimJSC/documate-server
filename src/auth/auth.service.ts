@@ -88,6 +88,7 @@ export class AuthService {
           expiresAt: this.getExpiresAt(),
         });
 
+      console.log(email, code);
       await this.nodeMailer.sendEmail({
         to: email,
         subject: '[Documate] 회원가입 이메일 인증',
