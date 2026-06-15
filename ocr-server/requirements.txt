@@ -4,3 +4,11 @@ pydantic==2.13.4
 pydantic-settings
 psycopg2-binary==2.9.12
 redis
+
+# ocr worker
+boto3
+requests
+paddleocr
+paddlepaddle
+numpy
+pillow
