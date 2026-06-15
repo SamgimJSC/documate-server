@@ -5,12 +5,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { FileType } from '../../global/constants/fileType.enum';
 import { AiStatus } from '../../global/constants/aiStatus.enum';
 import { User } from '../../users/entities/user.entity';
 import { DocumentCategory } from './document-category.entity';
+import { DocumentFile } from './document-file.entity';
 
 @Entity('documents')
 export class Document {
@@ -25,12 +27,6 @@ export class Document {
 
   @Column({ name: 'title', type: 'varchar', length: 200 })
   title: string;
-
-  @Column({ name: 'file_url', type: 'varchar', length: 500 })
-  fileUrl: string;
-
-  @Column({ name: 'file_name', type: 'varchar', length: 255 })
-  fileName: string;
 
   @Column({ name: 'file_type', type: 'enum', enum: FileType, nullable: true })
   fileType: FileType | null;
@@ -98,4 +94,7 @@ export class Document {
   @ManyToOne(() => DocumentCategory)
   @JoinColumn({ name: 'category_id' })
   category: DocumentCategory;
+
+  @OneToMany(() => DocumentFile, (file) => file.document)
+  files: DocumentFile[];
 }

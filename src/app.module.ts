@@ -16,6 +16,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -64,6 +65,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     PaymentsModule,
 
     AdminModule,
+
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
