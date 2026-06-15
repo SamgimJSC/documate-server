@@ -14,6 +14,8 @@ import { TypeOrmDocumentActivityRepository } from './model/document-activity.rep
 import { TypeOrmTagRepository } from './model/tag.repository';
 import { TypeOrmDocumentTagRepository } from './model/document-tag.repository';
 import { TypeOrmDocumentAlertRepository } from './model/document-alert.repository';
+import { DocumentFile } from './entities/document-file.entity';
+import { TypeOrmDocumentFileRepository } from './model/document-file.repository';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { TypeOrmDocumentAlertRepository } from './model/document-alert.repositor
       Tag,
       DocumentTag,
       DocumentAlert,
+      DocumentFile,
     ]),
   ],
   controllers: [DocumentsController],
@@ -36,6 +39,7 @@ import { TypeOrmDocumentAlertRepository } from './model/document-alert.repositor
     TypeOrmTagRepository,
     TypeOrmDocumentTagRepository,
     TypeOrmDocumentAlertRepository,
+    TypeOrmDocumentFileRepository,
   ],
 })
 export class DocumentsModule {}

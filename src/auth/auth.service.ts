@@ -60,6 +60,8 @@ export class AuthService {
 
     await this.emailVerificationRepository.markAsUsed(emailVerificationId);
 
+    await this.emailVerificationRepository.markAsUsed(emailVerificationId);
+
     return createdUser;
   }
 
@@ -88,6 +90,7 @@ export class AuthService {
           expiresAt: this.getExpiresAt(),
         });
 
+      console.log(email, code);
       await this.nodeMailer.sendEmail({
         to: email,
         subject: '[Documate] 회원가입 이메일 인증',
@@ -153,6 +156,7 @@ export class AuthService {
 
     const { accessToken, refreshToken } = this.signTokens(dbUser.userId);
 
+    await this.authTokenRepository.deleteByUserId(dbUser.userId);
     await this.authTokenRepository.createToken({
       userId: dbUser.userId,
       accessToken,
@@ -160,6 +164,11 @@ export class AuthService {
     });
 
     return { accessToken };
+  }
+
+  async logout(userId: string): Promise<void> {
+    // 해당 사용자의 리프레시 토큰(자동 로그인 세션)을 모두 제거
+    await this.authTokenRepository.deleteByUserId(userId);
   }
 
   createVerificationCode() {
