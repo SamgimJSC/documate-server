@@ -20,11 +20,17 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
   }
 
   async findByDocumentId(documentId: string): Promise<Document | null> {
-    return this.repo.findOne({ where: { documentId, isDeleted: false } });
+    return this.repo.findOne({
+      where: { documentId, isDeleted: false },
+      relations: { files: true },
+    });
   }
 
   async findByUserId(userId: string): Promise<Document[]> {
-    return this.repo.find({ where: { userId, isDeleted: false } });
+    return this.repo.find({
+      where: { userId, isDeleted: false },
+      relations: { files: true },
+    });
   }
 
   async updateDocument(
