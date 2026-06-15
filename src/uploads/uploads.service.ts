@@ -1,24 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { TypedConfigService } from '../configs/typedConfig.service';
 import { UploadTarget } from '../global/constants/uploadTarget.enum';
-import { FileType } from '../global/constants/fileType.enum';
 import { buildUploadKey } from './utils/buildUploadKey';
 import { UploadedFileResult } from './types/uploadedFileResult.type';
-
-const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-] as const;
-
-const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png']);
-
-const MIME_TO_FILE_TYPE: Record<string, FileType> = {
-  'application/pdf': FileType.PDF,
-  'image/jpeg': FileType.JPG, // FileType에 JPEG 없음 → JPG로 통일
-  'image/png': FileType.PNG,
-};
+import { EBadRequestException } from '../global/exceptions/EBadRequestException';
+import { ERROR_CODE } from '../global/constants/errorCode.const';
+import {
+  ALLOWED_MIME_TYPES,
+  ALLOWED_EXTENSIONS,
+  MIME_TO_FILE_TYPE,
+} from './const/upload.const';
 
 @Injectable()
 export class UploadsService {
@@ -32,7 +24,6 @@ export class UploadsService {
     this.bucket = this.configService.get('AWS_S3_BUCKET_NAME');
     this.cloudfrontUrl = this.configService.get('AWS_CLOUDFRONT_URL');
 
-    // S3Client는 서비스 초기화 시 한 번만 생성하여 재사용
     this.s3 = new S3Client({
       region: this.region,
       credentials: {
@@ -45,10 +36,12 @@ export class UploadsService {
   async uploadFile(
     userId: string,
     file: Express.Multer.File,
-    targetType: UploadTarget,
   ): Promise<UploadedFileResult> {
     if (!file) {
-      throw new BadRequestException('파일이 없습니다.');
+      throw new EBadRequestException({
+        message: '파일이 없습니다.',
+        errorCode: ERROR_CODE.FILE_MISSING,
+      });
     }
 
     if (
@@ -56,16 +49,23 @@ export class UploadsService {
         file.mimetype as (typeof ALLOWED_MIME_TYPES)[number],
       )
     ) {
-      throw new BadRequestException('허용되지 않는 파일 형식입니다.');
+      throw new EBadRequestException({
+        message: '허용되지 않는 파일 형식입니다.',
+        errorCode: ERROR_CODE.INVALID_FILE_TYPE,
+      });
     }
 
     const dotIndex = file.originalname.lastIndexOf('.');
     const ext =
       dotIndex !== -1 ? file.originalname.slice(dotIndex).toLowerCase() : '';
     if (!ALLOWED_EXTENSIONS.has(ext)) {
-      throw new BadRequestException('허용되지 않는 파일 확장자입니다.');
+      throw new EBadRequestException({
+        message: '허용되지 않는 파일 확장자입니다.',
+        errorCode: ERROR_CODE.INVALID_FILE_EXTENSION,
+      });
     }
 
+    const targetType = UploadTarget.TEMP;
     const fileKey = buildUploadKey(userId, targetType, file.originalname);
 
     await this.s3.send(
@@ -91,7 +91,6 @@ export class UploadsService {
   }
 
   private buildFileUrl(fileKey: string): string {
-    // 한글·공백 등이 포함된 key가 URL에서 깨지지 않도록 인코딩
     const encoded = encodeURI(fileKey);
 
     if (this.cloudfrontUrl) {
