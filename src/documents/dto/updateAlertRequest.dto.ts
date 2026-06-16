@@ -30,5 +30,9 @@ export class UpdateAlertRequestDto {
 
   @IsOptional()
   @IsBoolean()
+  channelAppPush?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   channelWebPush?: boolean;
 }

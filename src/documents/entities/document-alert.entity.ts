@@ -34,6 +34,9 @@ export class DocumentAlert {
   @Column({ name: 'channel_email', type: 'boolean', default: false })
   channelEmail: boolean;
 
+  @Column({ name: 'channel_app_push', type: 'boolean', default: false })
+  channelAppPush: boolean;
+
   @Column({ name: 'channel_web_push', type: 'boolean', default: false })
   channelWebPush: boolean;
 

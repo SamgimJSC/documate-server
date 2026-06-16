@@ -28,5 +28,9 @@ export class CreateAlertRequestDto {
 
   @IsOptional()
   @IsBoolean()
+  channelAppPush?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   channelWebPush?: boolean;
 }
