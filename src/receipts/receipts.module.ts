@@ -13,7 +13,12 @@ import { TypeOrmMonthlyReportRepository } from './model/monthly-report.repositor
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SpendCategory, Receipt, ReceiptTag, MonthlyReport]),
+    TypeOrmModule.forFeature([
+      SpendCategory,
+      Receipt,
+      ReceiptTag,
+      MonthlyReport,
+    ]),
   ],
   controllers: [ReceiptsController],
   exports: [TypeOrmModule, ReceiptsService],

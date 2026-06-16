@@ -7,6 +7,5 @@ export class CreateDocumentAlertDto {
   notifyDate: Date;
   reason?: string | null;
   channelEmail?: boolean;
-  channelAppPush?: boolean;
   channelWebPush?: boolean;
 }

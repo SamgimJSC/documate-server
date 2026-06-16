@@ -15,5 +15,8 @@ export interface UserConsentRepository {
     consentType: ConsentType,
     dto: UpdateUserConsentDto,
   ): Promise<UserConsent | null>;
-  bulkUpsert(userId: string, dtos: CreateUserConsentDto[]): Promise<UserConsent[]>;
+  bulkUpsert(
+    userId: string,
+    dtos: CreateUserConsentDto[],
+  ): Promise<UserConsent[]>;
 }

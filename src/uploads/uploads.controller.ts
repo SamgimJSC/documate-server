@@ -1,41 +1,50 @@
 import {
-  Body,
   Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { UploadsService } from './uploads.service';
-import { UploadFileDto } from './dto/uploadFile.dto';
+import { UploadTempFileDto } from './dto/uploadTempFile.dto';
+import { MAX_FILE_SIZE } from './const/upload.const';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-@Controller('uploads')
+@Controller('upload')
+@UseGuards(JwtAuthGuard)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
-  @Post()
-  @UseGuards(JwtAuthGuard)
+  @Get('start')
+  startUpload(@Req() req: any) {
+    return this.uploadsService.startUpload(req.user.userId);
+  }
+
+  @Post(':tempDocumentId')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE },
     }),
   )
-  uploadFile(
+  uploadTempFile(
     @Req() req: any,
+    @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
+    @Body() dto: UploadTempFileDto,
     @UploadedFile() file: Express.Multer.File,
-    @Body() uploadFileDto: UploadFileDto,
   ) {
-    return this.uploadsService.uploadFile(
+    return this.uploadsService.uploadTempFile(
       req.user.userId,
+      tempDocumentId,
+      dto.pageNo,
       file,
-      uploadFileDto.targetType,
     );
   }
 }

@@ -37,7 +37,10 @@ export class TypeOrmNotificationRepository implements NotificationRepository {
   }
 
   async markAllAsRead(userId: string): Promise<boolean> {
-    const result = await this.repo.update({ userId, isRead: false }, { isRead: true });
+    const result = await this.repo.update(
+      { userId, isRead: false },
+      { isRead: true },
+    );
     return (result.affected ?? 0) > 0;
   }
 

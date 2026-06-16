@@ -5,4 +5,8 @@ export interface DocumentTagRepository {
   removeTag(documentId: string, tagId: string): Promise<boolean>;
   findByDocumentId(documentId: string): Promise<DocumentTag[]>;
   findByTagId(tagId: string): Promise<DocumentTag[]>;
+  existsByDocumentIdAndTagId(
+    documentId: string,
+    tagId: string,
+  ): Promise<boolean>;
 }

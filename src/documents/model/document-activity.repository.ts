@@ -7,9 +7,7 @@ import { DocumentActivityRepository } from './document-activity.interface';
 import { CreateDocumentActivityDto } from '../dto/createDocumentActivity.dto';
 
 @Injectable()
-export class TypeOrmDocumentActivityRepository
-  implements DocumentActivityRepository
-{
+export class TypeOrmDocumentActivityRepository implements DocumentActivityRepository {
   constructor(
     @InjectRepository(DocumentActivity)
     private readonly repo: Repository<DocumentActivity>,

@@ -1,4 +1,13 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignUpDto } from './dto/signUp.dto';
 import { SendEmailVerificationDto } from './dto/sendEmailVerification.dto';
@@ -6,7 +15,7 @@ import { VerifyEmailVerificationDto } from './dto/verifyEmailVerification.dto';
 import { LoginDto } from './dto/login.dto';
 import { type Response, type Request } from 'express';
 import { JwtAuthGuard } from './auth.guard';
-import {  ReqUser } from '../global/types/express';
+import { ReqUser } from '../global/types/express';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { User } from '../users/entities/user.entity';
 

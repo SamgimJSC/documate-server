@@ -4,6 +4,7 @@ import { sanitizeFileName } from './sanitizeFileName';
 const TARGET_PREFIX: Record<UploadTarget, string> = {
   [UploadTarget.DOCUMENT]: 'd',
   [UploadTarget.RECEIPT]: 'r',
+  [UploadTarget.TEMP]: 't',
 };
 
 function pad(n: number): string {

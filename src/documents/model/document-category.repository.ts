@@ -6,9 +6,7 @@ import { DocumentCategory } from '../entities/document-category.entity';
 import { DocumentCategoryRepository } from './document-category.interface';
 
 @Injectable()
-export class TypeOrmDocumentCategoryRepository
-  implements DocumentCategoryRepository
-{
+export class TypeOrmDocumentCategoryRepository implements DocumentCategoryRepository {
   constructor(
     @InjectRepository(DocumentCategory)
     private readonly repo: Repository<DocumentCategory>,
