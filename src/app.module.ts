@@ -18,6 +18,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -59,6 +60,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     NotificationsModule,
 
     ReceiptsModule,
+
+    ReportsModule,
 
     SubscriptionsModule,
 
