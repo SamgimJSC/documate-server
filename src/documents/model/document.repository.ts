@@ -71,10 +71,9 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
       .andWhere("d.isDeleted = 'N'");
 
     if (keyword) {
-      qb.andWhere(
-        '(d.title ILIKE :keyword OR d.ocrText ILIKE :keyword)',
-        { keyword: `%${keyword}%` },
-      );
+      qb.andWhere('(d.title ILIKE :keyword OR d.ocrText ILIKE :keyword)', {
+        keyword: `%${keyword}%`,
+      });
     }
 
     if (categoryId !== undefined) {
