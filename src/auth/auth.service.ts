@@ -32,32 +32,32 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: TypedConfigService,
   ) {}
-  
+
   async signUp(signUpDto: SignUpDto) {
     const { email, nickname, password, emailVerificationId, pinNumber } =
       signUpDto;
 
     const emailVerification =
-    await this.emailVerificationRepository.findByVerificationId(
-      emailVerificationId,
+      await this.emailVerificationRepository.findByVerificationId(
+        emailVerificationId,
       );
 
-      if (!emailVerification || emailVerification.isUsed) {
+    if (!emailVerification || emailVerification.isUsed) {
       throw new EConflictException({
         message: '이메일 인증이 유효하지 않습니다.',
         errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
       });
     }
-    
+
     const hashedPw = await bcrypt.hash(password, 10);
-    
+
     const hashedPin = await bcrypt.hash(pinNumber, 10);
-    
+
     const createdUser = await this.usersService.createUser(
       { email, nickname, password: hashedPw },
       hashedPin,
     );
-    
+
     await this.emailVerificationRepository.markAsUsed(emailVerificationId);
 
     return createdUser;
@@ -76,10 +76,10 @@ export class AuthService {
         errorCode: ERROR_CODE.EMAIL_ALREADY_USED,
       });
     }
-    
+
     try {
       const code = this.createVerificationCode();
-      
+
       const emailVerification =
         await this.emailVerificationRepository.createVerification({
           email,
@@ -127,7 +127,6 @@ export class AuthService {
         errorCode: ERROR_CODE.INVALID_EMAIL_VERIFICATION,
       });
     }
-
 
     return true;
   }

@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
 import { DocumentFile } from '../entities/document-file.entity';
 import { DocumentFileRepository } from './document-file.interface';
-import { CreateDocumentFileDto } from '../dto/createDocumentFile.dto';
 
 @Injectable()
 export class TypeOrmDocumentFileRepository implements DocumentFileRepository {
@@ -13,13 +11,25 @@ export class TypeOrmDocumentFileRepository implements DocumentFileRepository {
     private readonly repo: Repository<DocumentFile>,
   ) {}
 
-  async createDocumentFile(dto: CreateDocumentFileDto): Promise<DocumentFile> {
-    const file = this.repo.create(dto);
+  async insert(input: {
+    documentId: string;
+    fileUrl: string;
+    pageNo: number;
+  }): Promise<DocumentFile> {
+    const file = this.repo.create(input);
     return this.repo.save(file);
   }
 
-  async findByFileId(fileId: number): Promise<DocumentFile | null> {
-    return this.repo.findOne({ where: { fileId } });
+  async countByDocumentId(documentId: string): Promise<number> {
+    return this.repo.count({ where: { documentId } });
+  }
+
+  async existsByDocumentIdAndPageNo(
+    documentId: string,
+    pageNo: number,
+  ): Promise<boolean> {
+    const count = await this.repo.count({ where: { documentId, pageNo } });
+    return count > 0;
   }
 
   async findByDocumentId(documentId: string): Promise<DocumentFile[]> {
@@ -29,8 +39,14 @@ export class TypeOrmDocumentFileRepository implements DocumentFileRepository {
     });
   }
 
-  async deleteDocumentFile(fileId: number): Promise<boolean> {
-    const result = await this.repo.delete(fileId);
-    return (result.affected ?? 0) > 0;
+  async findByFileIdAndDocumentId(
+    fileId: number,
+    documentId: string,
+  ): Promise<DocumentFile | null> {
+    return this.repo.findOne({ where: { fileId, documentId } });
+  }
+
+  async updatePageNo(fileId: number, pageNo: number): Promise<void> {
+    await this.repo.update({ fileId }, { pageNo });
   }
 }

@@ -36,7 +36,7 @@ import { DocumentAlert } from '../documents/entities/document-alert.entity';
     TypeOrmDeviceTokenRepository,
     FcmService,
     TypedConfigService,
-    NotificationScheduler,   
+    NotificationScheduler,
   ],
 })
 export class NotificationsModule {}

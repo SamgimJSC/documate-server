@@ -6,6 +6,7 @@
 |---|---|---|---|
 | [Auth](./auth.md) | `/auth` | N | 회원가입, 이메일 인증, 로그인 |
 | [Users](./users.md) | `/users` | Y | 사용자 조회, 생성, 수정, 삭제 |
+| [Documents](./documents.md) | `/documents` | Y | 문서 CRUD, 카테고리, 태그, 즐겨찾기, 검색/필터 |
 
 ---
 

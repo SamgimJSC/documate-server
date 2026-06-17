@@ -10,7 +10,7 @@ export class DocumentTag {
   @PrimaryColumn({ name: 'tag_id', type: 'uuid' })
   tagId: string;
 
-  @ManyToOne(() => Document)
+  @ManyToOne(() => Document, (d) => d.documentTags)
   @JoinColumn({ name: 'document_id' })
   document: Document;
 

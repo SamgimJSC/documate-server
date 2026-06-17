@@ -7,6 +7,10 @@ export interface DocumentAlertRepository {
   findByAlertId(alertId: string): Promise<DocumentAlert | null>;
   findByDocumentId(documentId: string): Promise<DocumentAlert[]>;
   findByUserId(userId: string): Promise<DocumentAlert[]>;
+  findByDocumentIdAndOffsetType(
+    documentId: string,
+    offsetType: string,
+  ): Promise<DocumentAlert | null>;
   findPendingAlerts(notifyDate: Date): Promise<DocumentAlert[]>;
   updateAlert(
     alertId: string,

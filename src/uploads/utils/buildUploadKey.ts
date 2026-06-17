@@ -11,15 +11,12 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+}
+
 function formatTimestamp(d: Date): string {
-  return (
-    `${d.getFullYear()}` +
-    `${pad(d.getMonth() + 1)}` +
-    `${pad(d.getDate())}` +
-    `${pad(d.getHours())}` +
-    `${pad(d.getMinutes())}` +
-    `${pad(d.getSeconds())}`
-  );
+  return `${formatDate(d)}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
 function randomSixDigits(): string {
@@ -33,10 +30,11 @@ export function buildUploadKey(
 ): string {
   const now = new Date();
   const prefix = TARGET_PREFIX[targetType];
+  const dateStr = formatDate(now);
   const tsStr = formatTimestamp(now);
   const random = randomSixDigits();
   const safeName = sanitizeFileName(originalName);
 
-  // uploads/{userId}/{d|r|t}/{random}_{yyyyMMddHHmmss}_{safeFileName}
-  return `uploads/${userId}/${prefix}/${random}_${tsStr}_${safeName}`;
+  // uploads/{userId}/{d|r}/{yyyyMMdd}/{random}_{yyyyMMddHHmmss}_{safeFileName}
+  return `uploads/${userId}/${prefix}/${dateStr}/${random}_${tsStr}_${safeName}`;
 }

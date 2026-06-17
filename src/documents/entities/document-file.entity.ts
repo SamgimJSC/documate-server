@@ -25,7 +25,7 @@ export class DocumentFile {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @ManyToOne(() => Document, (document) => document.files)
+  @ManyToOne(() => Document, (d) => d.documentFiles)
   @JoinColumn({ name: 'document_id' })
   document: Document;
 }
