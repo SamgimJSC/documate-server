@@ -29,4 +29,12 @@ export class TypeOrmDocumentTagRepository implements DocumentTagRepository {
   async findByTagId(tagId: string): Promise<DocumentTag[]> {
     return this.repo.find({ where: { tagId }, relations: { document: true } });
   }
+
+  async existsByDocumentIdAndTagId(
+    documentId: string,
+    tagId: string,
+  ): Promise<boolean> {
+    const count = await this.repo.count({ where: { documentId, tagId } });
+    return count > 0;
+  }
 }

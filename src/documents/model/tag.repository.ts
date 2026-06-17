@@ -30,6 +30,20 @@ export class TypeOrmTagRepository implements TagRepository {
     return this.repo.findOne({ where: { userId, name } });
   }
 
+  async findOrCreate(userId: string, name: string): Promise<Tag> {
+    try {
+      const tag = this.repo.create({ userId, name });
+      return await this.repo.save(tag);
+    } catch (e) {
+      if (!(e instanceof Error && 'code' in e && e.code === '23505')) {
+        throw e;
+      }
+      const existing = await this.repo.findOne({ where: { userId, name } });
+      if (!existing) throw e;
+      return existing;
+    }
+  }
+
   async deleteTag(tagId: string): Promise<boolean> {
     const result = await this.repo.delete({ tagId });
     return (result.affected ?? 0) > 0;

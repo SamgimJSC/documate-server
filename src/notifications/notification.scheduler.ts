@@ -10,6 +10,7 @@ import { type NotificationRepository } from './model/notification.interface';
 import { TypeOrmDeviceTokenRepository } from './model/device-token.repository';
 import { type DeviceTokenRepository } from './model/device-token.interface';
 import { NotificationCategory } from '../global/constants/notificationCategory.enum';
+import { Platform } from '../global/constants/platform.enum';
 import { FcmService } from './providers/fcm.service';
 
 /*
@@ -90,79 +91,79 @@ export class NotificationScheduler {
   3) document_alerts 발송 완료 처리
   */
   private async processAlert(alert: DocumentAlert): Promise<void> {
-  const title = this.buildTitle(alert);
-  const body = alert.reason ?? '';
+    const title = this.buildTitle(alert);
+    const body = alert.reason ?? '';
 
-  // 1) notifications 피드 기록 (앱 내 알림 목록용)
-  await this.notificationRepo.createNotification({
-    userId: alert.userId,
-    documentId: alert.documentId,
-    category: NotificationCategory.DOC,
-    title,
-    body,
-  });
-
-   // 2) FCM 푸시 발송
-  // - 앱 푸시 또는 웹 푸시 채널 중 하나라도 켜져있으면 발송
-  // - FCM이 IOS/ANDROID/WEB 토큰을 알아서 구분해서 보냄
-  // - 사용자가 어떤 채널 토글했는지에 따라 해당 플랫폼 토큰만 추리는 건 아래 메서드에서 처리
-  if (alert.channelAppPush || alert.channelWebPush) {
-    await this.sendFcmPush(
-      alert.userId,
+    // 1) notifications 피드 기록 (앱 내 알림 목록용)
+    await this.notificationRepo.createNotification({
+      userId: alert.userId,
+      documentId: alert.documentId,
+      category: NotificationCategory.DOC,
       title,
       body,
-      alert.documentId,
-      alert.channelAppPush,
-      alert.channelWebPush,
+    });
+
+    // 2) FCM 푸시 발송
+    // - 앱 푸시 또는 웹 푸시 채널 중 하나라도 켜져있으면 발송
+    // - FCM이 IOS/ANDROID/WEB 토큰을 알아서 구분해서 보냄
+    // - 사용자가 어떤 채널 토글했는지에 따라 해당 플랫폼 토큰만 추리는 건 아래 메서드에서 처리
+    if (alert.channelAppPush || alert.channelWebPush) {
+      await this.sendFcmPush(
+        alert.userId,
+        title,
+        body,
+        alert.documentId,
+        alert.channelAppPush,
+        alert.channelWebPush,
+      );
+    }
+
+    // 3) document_alerts 발송 완료 처리
+    await this.documentAlertRepo.update(
+      { alertId: alert.alertId },
+      { isSent: true, sentAt: new Date() },
     );
+
+    // TODO: 이메일 채널은 시원님의 NodeMailer 발송 안정화 이후 연결
+    // if (alert.channelEmail) await this.mailer.send(...);
   }
-
-   // 3) document_alerts 발송 완료 처리
-  await this.documentAlertRepo.update(
-    { alertId: alert.alertId },
-    { isSent: true, sentAt: new Date() },
-  );
-
-  // TODO: 이메일 채널은 시원님의 NodeMailer 발송 안정화 이후 연결
-  // if (alert.channelEmail) await this.mailer.send(...);
-}
-/*
+  /*
   사용자의 활성 디바이스 토큰을 가져와 FCM으로 멀티캐스트
   - channelAppPush가 true이면 IOS/ANDROID 토큰 포함
   - channelWebPush가 true이면 WEB 토큰 포함
 */
-private async sendFcmPush(
-  userId: string,
-  title: string,
-  body: string,
-  documentId: string | null,
-  includeAppPush: boolean,
-  includeWebPush: boolean,
-): Promise<void> {
-  const devices = await this.deviceTokenRepo.findByUserId(userId);
+  private async sendFcmPush(
+    userId: string,
+    title: string,
+    body: string,
+    documentId: string | null,
+    includeAppPush: boolean,
+    includeWebPush: boolean,
+  ): Promise<void> {
+    const devices = await this.deviceTokenRepo.findByUserId(userId);
 
-  // 사용자가 켠 채널에 해당하는 토큰만 필터링
-  const tokens = devices
-    .filter((d) => {
-      if (d.platform === 'WEB') return includeWebPush;
-      return includeAppPush; // IOS or ANDROID
-    })
-    .map((d) => d.token);
+    // 사용자가 켠 채널에 해당하는 토큰만 필터링
+    const tokens = devices
+      .filter((d) => {
+        if (d.platform === Platform.WEB) return includeWebPush;
+        return includeAppPush; // IOS or ANDROID
+      })
+      .map((d) => d.token);
 
-  if (tokens.length === 0) {
-    this.logger.warn(`발송 가능한 디바이스 토큰이 없습니다. userId=${userId}`);
-    return;
+    if (tokens.length === 0) {
+      this.logger.warn(
+        `발송 가능한 디바이스 토큰이 없습니다. userId=${userId}`,
+      );
+      return;
+    }
+
+    await this.fcmService.sendMulti({
+      tokens,
+      title,
+      body,
+      data: documentId ? { documentId, category: 'DOC' } : { category: 'DOC' },
+    });
   }
-
-  await this.fcmService.sendMulti({
-    tokens,
-    title,
-    body,
-    data: documentId
-      ? { documentId, category: 'DOC' }
-      : { category: 'DOC' },
-  });
-}
 
   /*
     알림 제목 만들기

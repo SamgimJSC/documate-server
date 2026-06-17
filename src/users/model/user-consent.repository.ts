@@ -51,7 +51,10 @@ export class TypeOrmUserConsentRepository implements UserConsentRepository {
     for (const dto of dtos) {
       const existing = await this.findByUserIdAndType(userId, dto.consentType);
       if (existing) {
-        Object.assign(existing, { isAgreed: dto.isAgreed, agreedAt: dto.agreedAt });
+        Object.assign(existing, {
+          isAgreed: dto.isAgreed,
+          agreedAt: dto.agreedAt,
+        });
         results.push(await this.repo.save(existing));
       } else {
         results.push(await this.createConsent({ ...dto, userId }));

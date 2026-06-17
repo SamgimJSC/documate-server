@@ -28,11 +28,16 @@ export class FcmService implements OnModuleInit {
       'FCM_SERVICE_ACCOUNT_PATH',
     );
 
-    initializeApp({
-      credential: cert(serviceAccountPath),
-    });
-
-    this.logger.log('Firebase Admin SDK 초기화 완료');
+    try {
+      initializeApp({
+        credential: cert(serviceAccountPath),
+      });
+      this.logger.log('Firebase Admin SDK 초기화 완료');
+    } catch (err) {
+      this.logger.warn(
+        `Firebase Admin SDK 초기화 실패 — FCM 기능이 비활성화됩니다. (${err instanceof Error ? err.message : String(err)})`,
+      );
+    }
   }
 
   /*

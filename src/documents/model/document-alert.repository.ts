@@ -31,6 +31,15 @@ export class TypeOrmDocumentAlertRepository implements DocumentAlertRepository {
     return this.repo.find({ where: { userId } });
   }
 
+  async findByDocumentIdAndOffsetType(
+    documentId: string,
+    offsetType: string,
+  ): Promise<DocumentAlert | null> {
+    return this.repo.findOne({
+      where: { documentId, offsetType: offsetType as any },
+    });
+  }
+
   async findPendingAlerts(notifyDate: Date): Promise<DocumentAlert[]> {
     return this.repo.find({
       where: { isSent: false, notifyDate: LessThanOrEqual(notifyDate) },
