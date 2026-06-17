@@ -5,10 +5,11 @@ export type EnvConfigType = {
   JWT_SECRET: string;
   EMAIL: string;
 
-  DB_HOST: string;
-  DB_PORT: number;
-  DB_USER: string;
-  DB_PASSWORD: string;
+  // DB_HOST: string;
+  // DB_PORT: number;
+  // DB_USER: string;
+  // DB_PASSWORD: string;
+  DB_URL: string;
   DB_NAME: string;
   DB_SYNCHRONIZE: boolean;
   FCM_SERVICE_ACCOUNT_PATH: string;

@@ -38,27 +38,9 @@ class EnvironmentVariables {
   @IsNotEmpty()
   HOST: string;
 
-  @IsEnum(DBType)
-  @IsNotEmpty()
-  DB_TYPE: DBType;
-
   @IsString()
   @IsNotEmpty()
-  DB_HOST: string;
-
-  @IsNumber()
-  @Min(0)
-  @Max(65535)
-  @IsNotEmpty()
-  DB_PORT: number;
-
-  @IsString()
-  @IsNotEmpty()
-  DB_USER: string;
-
-  @IsString()
-  @IsNotEmpty()
-  DB_PASSWORD: string;
+  DB_URL: string;
 
   @IsString()
   @IsNotEmpty()

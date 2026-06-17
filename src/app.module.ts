@@ -19,6 +19,7 @@ import { AdminModule } from './admin/admin.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './redis/redis.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -35,11 +36,13 @@ import { RedisModule } from './redis/redis.module';
       imports: [TypedConfigModule],
       inject: [TypedConfigService],
       useFactory: (config: TypedConfigService) => ({
+        // host: config.get('DB_HOST'),
+        // port: config.get('DB_PORT'),
+        // username: config.get('DB_USER'),
+        // password: config.get('DB_PASSWORD'),
         type: 'postgres',
-        host: config.get('DB_HOST'),
-        port: config.get('DB_PORT'),
-        username: config.get('DB_USER'),
-        password: config.get('DB_PASSWORD'),
+        url: config.get('DB_URL'),
+        ssl: { rejectUnauthorized: false },
         database: config.get('DB_NAME'),
         synchronize: config.get('DB_SYNCHRONIZE'),
         autoLoadEntities: true,
@@ -60,6 +63,8 @@ import { RedisModule } from './redis/redis.module';
     NotificationsModule,
 
     ReceiptsModule,
+
+    ReportsModule,
 
     SubscriptionsModule,
 
