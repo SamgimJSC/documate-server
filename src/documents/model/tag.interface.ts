@@ -6,5 +6,6 @@ export interface TagRepository {
   findByUserId(userId: string): Promise<Tag[]>;
   findByTagId(tagId: string): Promise<Tag | null>;
   findByUserIdAndName(userId: string, name: string): Promise<Tag | null>;
+  findOrCreate(userId: string, name: string): Promise<Tag>;
   deleteTag(tagId: string): Promise<boolean>;
 }

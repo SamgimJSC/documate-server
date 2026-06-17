@@ -60,8 +60,6 @@ export class AuthService {
 
     await this.emailVerificationRepository.markAsUsed(emailVerificationId);
 
-    await this.emailVerificationRepository.markAsUsed(emailVerificationId);
-
     return createdUser;
   }
 

@@ -12,6 +12,7 @@ import { FileType } from '../../global/constants/fileType.enum';
 import { AiStatus } from '../../global/constants/aiStatus.enum';
 import { User } from '../../users/entities/user.entity';
 import { DocumentCategory } from './document-category.entity';
+import { DocumentTag } from './document-tag.entity';
 import { DocumentFile } from './document-file.entity';
 
 @Entity('documents')
@@ -25,7 +26,7 @@ export class Document {
   @Column({ name: 'category_id', type: 'integer', nullable: true })
   categoryId: number | null;
 
-  @Column({ name: 'title', type: 'varchar', length: 200 })
+  @Column({ name: 'title', type: 'varchar', length: 200, default: '' })
   title: string;
 
   @Column({ name: 'file_type', type: 'enum', enum: FileType, nullable: true })
@@ -84,8 +85,8 @@ export class Document {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
-  @Column({ name: 'is_deleted', type: 'boolean', default: false })
-  isDeleted: boolean;
+  @Column({ name: 'is_deleted', type: 'char', length: 1, default: 'N' })
+  isDeleted: string;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
@@ -95,6 +96,9 @@ export class Document {
   @JoinColumn({ name: 'category_id' })
   category: DocumentCategory;
 
-  @OneToMany(() => DocumentFile, (file) => file.document)
-  files: DocumentFile[];
+  @OneToMany(() => DocumentTag, (dt) => dt.document)
+  documentTags: DocumentTag[];
+
+  @OneToMany(() => DocumentFile, (df) => df.document)
+  documentFiles: DocumentFile[];
 }

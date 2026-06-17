@@ -23,7 +23,13 @@ export class Payment {
   @Column({ name: 'method_id', type: 'uuid', nullable: true })
   methodId: string | null;
 
-  @Column({ name: 'tid', type: 'varchar', length: 100, unique: true, nullable: true })
+  @Column({
+    name: 'tid',
+    type: 'varchar',
+    length: 100,
+    unique: true,
+    nullable: true,
+  })
   tid: string | null;
 
   @Column({ name: 'amount', type: 'numeric', precision: 10, scale: 0 })
