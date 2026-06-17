@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { ERROR_CODE } from '../constants/errorCode.const';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -14,7 +15,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
-    let errorCode = '';
+    let errorCode: string = ERROR_CODE.INTERNAL_SERVER_ERROR;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();

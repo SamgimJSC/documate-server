@@ -12,6 +12,10 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { FileType } from '../../global/constants/fileType.enum';
 import { AiStatus } from '../../global/constants/aiStatus.enum';
+import {
+  DOCUMENT_DEFAULT_PAGE,
+  DOCUMENT_DEFAULT_LIMIT,
+} from '../../global/constants/document-limit.const';
 
 export class GetDocumentsQueryDto {
   @IsOptional()
@@ -48,14 +52,14 @@ export class GetDocumentsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page?: number = 1;
+  page?: number = DOCUMENT_DEFAULT_PAGE;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
-  limit?: number = 20;
+  limit?: number = DOCUMENT_DEFAULT_LIMIT;
 
   @IsOptional()
   @IsIn(['createdAt', 'updatedAt', 'title', 'expiryDate'])

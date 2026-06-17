@@ -1,4 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import {
+  DOCUMENT_DEFAULT_PAGE,
+  DOCUMENT_DEFAULT_LIMIT,
+} from '../global/constants/document-limit.const';
 import { TypeOrmDocumentRepository } from './model/document.repository';
 import { TypeOrmDocumentCategoryRepository } from './model/document-category.repository';
 import { TypeOrmDocumentFileRepository } from './model/document-file.repository';
@@ -16,20 +21,22 @@ import { CreateAlertRequestDto } from './dto/createAlertRequest.dto';
 import { UpdateAlertRequestDto } from './dto/updateAlertRequest.dto';
 import { Document } from './entities/document.entity';
 import { DocumentCategory } from './entities/document-category.entity';
+import { DocumentFile } from './entities/document-file.entity';
 import { DocumentAlert } from './entities/document-alert.entity';
 import { Tag } from './entities/tag.entity';
 import { DocumentTag } from './entities/document-tag.entity';
 import { AiStatus } from '../global/constants/aiStatus.enum';
+import { InputMethod } from '../global/constants/inputMethod.enum';
 import { DocumentActivityType } from '../global/constants/documentActivityType.enum';
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { EConflictException } from '../global/exceptions/EConflictException';
 import { EBadRequestException } from '../global/exceptions/EBadRequestException';
-import { EForbiddenException } from '../global/exceptions/EForbiddenException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 
 @Injectable()
 export class DocumentsService {
   constructor(
+    private readonly dataSource: DataSource,
     private readonly documentRepository: TypeOrmDocumentRepository,
     private readonly documentCategoryRepository: TypeOrmDocumentCategoryRepository,
     private readonly documentFileRepository: TypeOrmDocumentFileRepository,
@@ -66,8 +73,8 @@ export class DocumentsService {
     const document = await this.documentRepository.createDocument({
       ...dto,
       userId,
-      aiStatus: AiStatus.DONE,
-      isConfirmed: true,
+      aiStatus: dto.inputMethod === InputMethod.OCR ? AiStatus.PENDING : AiStatus.DONE,
+      isConfirmed: dto.inputMethod !== InputMethod.OCR,
     });
 
     await this.documentActivityRepository.createActivity({
@@ -93,8 +100,8 @@ export class DocumentsService {
         userId,
         query,
       );
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
+    const page = query.page ?? DOCUMENT_DEFAULT_PAGE;
+    const limit = query.limit ?? DOCUMENT_DEFAULT_LIMIT;
     return { items, total, page, limit, hasNext: total > page * limit };
   }
 
@@ -199,10 +206,7 @@ export class DocumentsService {
       });
     }
 
-    let tag = await this.tagRepository.findByUserIdAndName(userId, dto.name);
-    if (!tag) {
-      tag = await this.tagRepository.createTag({ userId, name: dto.name });
-    }
+    const tag = await this.tagRepository.findOrCreate(userId, dto.name);
 
     const exists = await this.documentTagRepository.existsByDocumentIdAndTagId(
       documentId,
@@ -251,8 +255,8 @@ export class DocumentsService {
     );
     if (!removed) {
       throw new ENotFoundException({
-        errorCode: ERROR_CODE.TAG_NOT_FOUND,
-        message: '존재하지 않는 태그입니다.',
+        errorCode: ERROR_CODE.DOCUMENT_TAG_NOT_FOUND,
+        message: '해당 문서에 연결된 태그를 찾을 수 없습니다.',
       });
     }
 
@@ -364,7 +368,13 @@ export class DocumentsService {
       alertId,
       dto,
     );
-    return updated!;
+    if (!updated) {
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_ALERT_NOT_FOUND,
+        message: '알림을 찾을 수 없습니다.',
+      });
+    }
+    return updated;
   }
 
   async deleteAlert(
@@ -411,13 +421,6 @@ export class DocumentsService {
       });
     }
 
-    if (document.userId !== userId) {
-      throw new EForbiddenException({
-        errorCode: ERROR_CODE.DOCUMENT_NOT_OWNER,
-        message: '접근 권한이 없습니다.',
-      });
-    }
-
     const pageNos = dto.files.map((f) => f.pageNo);
     const hasDuplicate = pageNos.length !== new Set(pageNos).size;
     if (hasDuplicate) {
@@ -441,9 +444,38 @@ export class DocumentsService {
       }
     }
 
-    for (const item of dto.files) {
-      await this.documentFileRepository.updatePageNo(item.fileId, item.pageNo);
+    const allFiles =
+      await this.documentFileRepository.findByDocumentId(documentId);
+    const reorderingFileIds = new Set(dto.files.map((f) => f.fileId));
+    const newPageNos = new Set(dto.files.map((f) => f.pageNo));
+
+    for (const existing of allFiles) {
+      if (
+        !reorderingFileIds.has(existing.fileId) &&
+        newPageNos.has(existing.pageNo)
+      ) {
+        throw new EConflictException({
+          errorCode: ERROR_CODE.DOCUMENT_FILE_PAGE_DUPLICATE,
+          message: `pageNo ${existing.pageNo}는 이미 다른 파일이 사용 중입니다.`,
+        });
+      }
     }
+
+    await this.dataSource.transaction(async (em) => {
+      for (const item of dto.files) {
+        const result = await em.update(
+          DocumentFile,
+          { fileId: item.fileId, documentId },
+          { pageNo: item.pageNo },
+        );
+        if ((result.affected ?? 0) === 0) {
+          throw new ENotFoundException({
+            errorCode: ERROR_CODE.DOCUMENT_FILE_NOT_FOUND,
+            message: `파일을 찾을 수 없습니다. (fileId: ${item.fileId})`,
+          });
+        }
+      }
+    });
 
     return { updated: true };
   }

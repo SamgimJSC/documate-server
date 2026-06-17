@@ -12,8 +12,12 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { FileType } from '../../global/constants/fileType.enum';
+import { InputMethod } from '../../global/constants/inputMethod.enum';
 
 export class CreateDocumentDto {
+  @IsEnum(InputMethod)
+  inputMethod: InputMethod;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

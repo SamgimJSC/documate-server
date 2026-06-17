@@ -8,6 +8,10 @@ import { CreateDocumentDto } from '../dto/createDocument.dto';
 import { UpdateDocumentDto } from '../dto/updateDocument.dto';
 import { GetDocumentsQueryDto } from '../dto/getDocumentsQuery.dto';
 import { AiStatus } from '../../global/constants/aiStatus.enum';
+import {
+  DOCUMENT_DEFAULT_PAGE,
+  DOCUMENT_DEFAULT_LIMIT,
+} from '../../global/constants/document-limit.const';
 
 const ALLOWED_SORT = new Set(['createdAt', 'updatedAt', 'title', 'expiryDate']);
 
@@ -53,8 +57,8 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
       aiStatus,
       isFavorite,
       tagId,
-      page = 1,
-      limit = 20,
+      page = DOCUMENT_DEFAULT_PAGE,
+      limit = DOCUMENT_DEFAULT_LIMIT,
       sort = 'createdAt',
       order = 'DESC',
     } = query;

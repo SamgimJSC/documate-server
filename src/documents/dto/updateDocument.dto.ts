@@ -1,18 +1,15 @@
 import {
   IsString,
   IsOptional,
-  IsEnum,
   IsInt,
   IsNumber,
   IsDateString,
   IsObject,
-  IsBoolean,
   MaxLength,
   Min,
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { AiStatus } from '../../global/constants/aiStatus.enum';
 
 export class UpdateDocumentDto {
   @IsOptional()
@@ -51,12 +48,4 @@ export class UpdateDocumentDto {
   @IsOptional()
   @IsDateString()
   renewalDate?: string | null;
-
-  @IsOptional()
-  @IsBoolean()
-  isConfirmed?: boolean;
-
-  @IsOptional()
-  @IsEnum(AiStatus)
-  aiStatus?: AiStatus;
 }

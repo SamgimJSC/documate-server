@@ -17,6 +17,7 @@ import { TypeOrmTempFileRepository } from './model/temp-file.repository';
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { EForbiddenException } from '../global/exceptions/EForbiddenException';
 import { EBadRequestException } from '../global/exceptions/EBadRequestException';
+import { EConflictException } from '../global/exceptions/EConflictException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 
 export interface TempFileItem {
@@ -84,7 +85,7 @@ export class UploadsService {
     if (!ALLOWED_EXTENSIONS.has(ext)) {
       throw new EBadRequestException({
         message: '허용되지 않는 파일 확장자입니다.',
-        errorCode: ERROR_CODE.INVALID_FILE_TYPE,
+        errorCode: ERROR_CODE.INVALID_FILE_EXTENSION,
       });
     }
 
@@ -147,7 +148,7 @@ export class UploadsService {
     if (!IMAGE_ONLY_EXTENSIONS.has(ext)) {
       throw new EBadRequestException({
         message: 'JPG, PNG 이미지만 업로드할 수 있습니다.',
-        errorCode: ERROR_CODE.INVALID_FILE_TYPE,
+        errorCode: ERROR_CODE.INVALID_FILE_EXTENSION,
       });
     }
 
@@ -174,11 +175,10 @@ export class UploadsService {
       });
     }
 
-    const isDuplicate =
-      await this.tempFileRepo.existsByTempDocumentIdAndPageNo(
-        tempDocumentId,
-        pageNo,
-      );
+    const isDuplicate = await this.tempFileRepo.existsByTempDocumentIdAndPageNo(
+      tempDocumentId,
+      pageNo,
+    );
     if (isDuplicate) {
       throw new EBadRequestException({
         message: `이미 업로드된 페이지 번호입니다. (pageNo: ${pageNo})`,
@@ -186,7 +186,11 @@ export class UploadsService {
       });
     }
 
-    const fileKey = buildUploadKey(userId, UploadTarget.TEMP, file.originalname);
+    const fileKey = buildUploadKey(
+      userId,
+      UploadTarget.TEMP,
+      file.originalname,
+    );
     await this.s3.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -197,9 +201,20 @@ export class UploadsService {
     );
 
     const fileUrl = this.buildFileUrl(fileKey);
-    await this.tempFileRepo.insert({ tempDocumentId, fileUrl, pageNo });
+    try {
+      await this.tempFileRepo.insert({ tempDocumentId, fileUrl, pageNo });
+    } catch (e) {
+      if (e instanceof Error && 'code' in e && e.code === '23505') {
+        throw new EConflictException({
+          errorCode: ERROR_CODE.TEMP_FILE_PAGE_DUPLICATE,
+          message: `이미 업로드된 페이지 번호입니다. (pageNo: ${pageNo})`,
+        });
+      }
+      throw e;
+    }
 
-    const allFiles = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+    const allFiles =
+      await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
 
     return {
       tempDocumentId,

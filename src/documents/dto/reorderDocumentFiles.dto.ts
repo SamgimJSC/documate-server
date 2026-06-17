@@ -7,6 +7,7 @@ import {
   ValidateNested,
   ArrayMinSize,
 } from 'class-validator';
+import { DOCUMENT_MAX_PAGE_NO } from '../../global/constants/document-limit.const';
 
 class FileOrderItem {
   @IsInt()
@@ -14,7 +15,7 @@ class FileOrderItem {
 
   @IsInt()
   @Min(1)
-  @Max(10)
+  @Max(DOCUMENT_MAX_PAGE_NO)
   pageNo: number;
 }
 

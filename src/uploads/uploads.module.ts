@@ -9,10 +9,7 @@ import { TypeOrmTempDocumentRepository } from './model/temp-document.repository'
 import { TypeOrmTempFileRepository } from './model/temp-file.repository';
 
 @Module({
-  imports: [
-    AuthModule,
-    TypeOrmModule.forFeature([TempDocument, TempFile]),
-  ],
+  imports: [AuthModule, TypeOrmModule.forFeature([TempDocument, TempFile])],
   controllers: [UploadsController],
   providers: [
     UploadsService,
