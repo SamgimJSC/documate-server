@@ -24,6 +24,7 @@ import { TypeOrmMonthlyReportRepository } from './model/monthly-report.repositor
   exports: [
     ReceiptsService,
     TypeOrmReceiptRepository, // ← reports 모듈에서 쓸 수 있게 export
+    TypeOrmSpendCategoryRepository // ← spend-categories 모듈에서 쓸 수 있게 함
   ],
   providers: [
     ReceiptsService,

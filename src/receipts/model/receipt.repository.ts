@@ -46,4 +46,13 @@ export class TypeOrmReceiptRepository implements ReceiptRepository {
     await this.repo.save(receipt);
     return true;
   }
+
+   async findByReceiptIdWithCategory(
+    receiptId: string,
+  ): Promise<Receipt | null> {
+    return this.repo.findOne({
+      where: { receiptId, isDeleted: false },
+      relations: { spendCategory: true },
+    });
+  }
 }

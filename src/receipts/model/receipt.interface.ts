@@ -11,4 +11,6 @@ export interface ReceiptRepository {
     dto: UpdateReceiptDto,
   ): Promise<Receipt | null>;
   softDeleteReceipt(receiptId: string): Promise<boolean>;
+
+  findByReceiptIdWithCategory(receiptId: string): Promise<Receipt | null>;  //상세 조회용 (카테고리 정보까지 함께 가져옴)
 }
