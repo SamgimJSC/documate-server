@@ -57,18 +57,19 @@ export class NotificationScheduler {
       where: { isSent: false, notifyDate: LessThanOrEqual(today) },
       relations: { document: true }, // 문서 제목 가져오기용
     });
+     const validAlerts = dueAlerts.filter(a => a.document?.isDeleted !== 'Y');
 
-    if (dueAlerts.length === 0) {
+    if (validAlerts.length === 0) {
       this.logger.log('발송 대상 알림이 없습니다.');
       return;
     }
 
-    this.logger.log(`발송 대상 알림 ${dueAlerts.length}건 처리 시작`);
+    this.logger.log(`발송 대상 알림 ${validAlerts.length}건 처리 시작`);
 
     let success = 0;
     let failed = 0;
 
-    for (const alert of dueAlerts) {
+    for (const alert of validAlerts) {
       try {
         await this.processAlert(alert);
         success++;
