@@ -10,6 +10,7 @@ import { TypeOrmSpendCategoryRepository } from './model/spend-category.repositor
 import { TypeOrmReceiptRepository } from './model/receipt.repository';
 import { TypeOrmReceiptTagRepository } from './model/receipt-tag.repository';
 import { TypeOrmMonthlyReportRepository } from './model/monthly-report.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -19,12 +20,13 @@ import { TypeOrmMonthlyReportRepository } from './model/monthly-report.repositor
       ReceiptTag,
       MonthlyReport,
     ]),
+    AuthModule, 
   ],
   controllers: [ReceiptsController],
   exports: [
     ReceiptsService,
     TypeOrmReceiptRepository, // ← reports 모듈에서 쓸 수 있게 export
-    TypeOrmSpendCategoryRepository // ← spend-categories 모듈에서 쓸 수 있게 함
+    TypeOrmSpendCategoryRepository, // ← spend-categories 모듈에서 쓸 수 있게 함
   ],
   providers: [
     ReceiptsService,
