@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { DocumentFile } from '../entities/document-file.entity';
 import { DocumentFileRepository } from './document-file.interface';
 
@@ -44,6 +44,13 @@ export class TypeOrmDocumentFileRepository implements DocumentFileRepository {
     documentId: string,
   ): Promise<DocumentFile | null> {
     return this.repo.findOne({ where: { fileId, documentId } });
+  }
+
+  async findByFileIdsAndDocumentId(
+    fileIds: number[],
+    documentId: string,
+  ): Promise<DocumentFile[]> {
+    return this.repo.find({ where: { fileId: In(fileIds), documentId } });
   }
 
   async updatePageNo(fileId: number, pageNo: number): Promise<void> {
