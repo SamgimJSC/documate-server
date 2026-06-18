@@ -21,5 +21,10 @@ export interface DocumentFileRepository {
     documentId: string,
   ): Promise<DocumentFile | null>;
 
+  findByFileIdsAndDocumentId(
+    fileIds: number[],
+    documentId: string,
+  ): Promise<DocumentFile[]>;
+
   updatePageNo(fileId: number, pageNo: number): Promise<void>;
 }
