@@ -177,18 +177,21 @@ export class DocumentsService {
   }
 
   async deleteDocument(documentId: string, userId: string): Promise<null> {
-    const deleted = await this.documentRepository.softDeleteDocumentByUserId(
+    const document = await this.documentRepository.findByDocumentIdAndUserId(
       documentId,
       userId,
     );
-    if (!deleted) {
+    if (!document) {
       throw new ENotFoundException({
         errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
         message: '존재하지 않는 문서입니다.',
       });
     }
 
-    await this.documentAlertRepository.deleteByDocumentId(documentId);
+    await this.dataSource.transaction(async (em) => {
+      await em.update(Document, { documentId }, { isDeleted: true });
+      await em.delete(DocumentAlert, { documentId });
+    });
 
     return null;
   }
@@ -433,18 +436,18 @@ export class DocumentsService {
       });
     }
 
-    for (const item of dto.files) {
-      const fileExists =
-        await this.documentFileRepository.findByFileIdAndDocumentId(
-          item.fileId,
-          documentId,
-        );
-      if (!fileExists) {
-        throw new ENotFoundException({
-          errorCode: ERROR_CODE.DOCUMENT_FILE_NOT_FOUND,
-          message: `존재하지 않는 파일입니다. (fileId: ${item.fileId})`,
-        });
-      }
+    const fileIds = dto.files.map((f) => f.fileId);
+    const foundFiles = await this.documentFileRepository.findByFileIdsAndDocumentId(
+      fileIds,
+      documentId,
+    );
+    if (foundFiles.length !== fileIds.length) {
+      const foundIds = new Set(foundFiles.map((f) => f.fileId));
+      const missingId = fileIds.find((id) => !foundIds.has(id));
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_FILE_NOT_FOUND,
+        message: `존재하지 않는 파일입니다. (fileId: ${missingId})`,
+      });
     }
 
     const allFiles =

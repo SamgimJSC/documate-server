@@ -57,7 +57,7 @@ export class NotificationScheduler {
       where: { isSent: false, notifyDate: LessThanOrEqual(today) },
       relations: { document: true },
     });
-     const validAlerts = dueAlerts.filter(a => a.document?.isDeleted !== 'Y');
+    const validAlerts = dueAlerts.filter(a => !a.document?.isDeleted);
 
     if (validAlerts.length === 0) {
       this.logger.log('발송 대상 알림이 없습니다.');
