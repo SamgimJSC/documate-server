@@ -18,6 +18,8 @@ import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
+import { DecoUser } from '../global/decorators/decoUser.decorator';
+import { User } from './entities/user.entity';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -30,6 +32,11 @@ export class UsersController {
     query: GetUsersQueryDto,
   ) {
     return this.usersService.getUsers(query);
+  }
+
+  @Get('me')
+  getMe(@DecoUser() user: User) {
+    return this.usersService.getOneUser(user.userId);
   }
 
   @Get(':id')
