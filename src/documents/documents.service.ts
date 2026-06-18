@@ -187,6 +187,9 @@ export class DocumentsService {
         message: '존재하지 않는 문서입니다.',
       });
     }
+
+    await this.documentAlertRepository.deleteByDocumentId(documentId);
+
     return null;
   }
 
