@@ -1,6 +1,6 @@
 from datetime import date
 
-import psycopg2.extras
+from psycopg.types.json import Json
 
 from app.db import get_conn
 from .dates import parse_date
@@ -22,6 +22,7 @@ def insert_receipt(
     """영수증으로 분류된 경우 receipts 행을 생성하고 receipt_id 를 반환한다.
 
     store_name / total_amount / purchase_date 는 NOT NULL 이므로 안전한 기본값을 채운다.
+    (필수값 검증은 Pydantic 단계에서 선행되며, 여기서는 마지막 방어선이다.)
     """
     parsed_date = parse_date(purchase_date) or date.today().isoformat()
 
@@ -51,7 +52,7 @@ def insert_receipt(
                     parsed_date,
                     payment_item,
                     ocr_text,
-                    psycopg2.extras.Json(extracted_data),
+                    Json(extracted_data),
                 ),
             )
             receipt_id = cur.fetchone()[0]

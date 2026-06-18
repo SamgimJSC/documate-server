@@ -1,3 +1,3 @@
-from .engine import extract_text
+from .engine import extract_text, OcrResult
 
-__all__ = ["extract_text"]
+__all__ = ["extract_text", "OcrResult"]

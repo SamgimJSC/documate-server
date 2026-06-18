@@ -20,10 +20,10 @@ def _client():
 
 
 def _to_key(file_url: str) -> str:
-    """document_files.file_url 은 S3 object key 또는 전체 URL 일 수 있다.
+    """file_url 은 S3 object key 또는 전체 URL 일 수 있다.
 
-    API 서버는 보통 `https://{bucket}.s3.{region}.amazonaws.com/{key}` 또는
-    CloudFront URL 을 저장하므로 둘 다 key 로 정규화한다.
+    `https://{bucket}.s3.{region}.amazonaws.com/{key}` 또는 CloudFront URL 로
+    저장돼 있어도 둘 다 object key 로 정규화한다.
     """
     if file_url.startswith("http://") or file_url.startswith("https://"):
         path = urlparse(file_url).path.lstrip("/")

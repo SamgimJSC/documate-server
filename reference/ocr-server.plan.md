@@ -1,155 +1,130 @@
-# DocuMate OCR Server
+# DocuMate OCR Server 구현 작업계획
 
-업로드된 문서/영수증 이미지를 OCR + 로컬 LLM 으로 분석하는 Python 워커 서버.
+> 참조: [ocr-server.spec.md](./ocr-server.spec.md)
+> 대상: `ocr-server/` (Python / FastAPI 워커 서버)
 
-## 서비스 플로우
+## 1. 목표 요약
 
-1. 클라이언트(C)에서 S3로 직접 이미지 업로드
-   1. GET /uploads/start
-   2. POST /uploads/:tempDocumentId
-2. C에서 API서버(A)으로 이미지 분석 요청
-   1. POST /uploads/:tempDocumentId/ai
-3. A에서 Redis(R)의 큐에 PUSH
-4. OCR서버(O)에서 R의 큐로부터 POP
-5. OCR분석 작업 시작
-   1. OCR 라이브러리로 이미지 텍스트 추출
-      - 실패시 `FAILED`
-      - paddle OCR에서 추출한 텍스트의 정확도의 전체 평균값 계산
-   2. 추출한 텍스트 로컬 LLM으로 receit, document 대분류 분류
-      - 대분류 (r, d) → 세부분류(카테고리) → 분류안된 최종은 document의 etc로 분류
-      - LLM 프롬프트에 신뢰도 평가하도록 작성
-        - 예시: 문서를 분석하고 0~100 사이 confidence를 반환해라.
-      - OCR, LLM 신뢰도 평균내서 ai_confidence값 계산
-      - ai_confidence값이 70을 하회하면 분석 실패로 판정하고 `FAILED`
-   3. 로컬 LLM으로 OCR추출된 텍스트 DB에 넣을수 있는 JSON양식으로 포매팅
-      - JSON 데이터 예시
-        - 부동산임대차계약서
-          ```json
-          {
-            "document_id": "d8d90f8b-f7a8-4f70-a6d4-7d0d8d0e8e31",
-            "user_id": "f4c8c7c4-8b8f-4b7d-b4d5-5b1f95f0a0c2",
-            "category_id": 3,
-            "title": "전세계약서_2025.pdf",
-            "file_type": "JPG",
-            "file_size_bytes": 2489371,
-            "page_count": 4,
-            "ocr_text": "주택임대차계약서 임대인 홍길동 임차인 김철수 계약기간 2025-03-01 ~ 2027-02-28 보증금 30000000원 월세 500000원...",
-            "extracted_data": {
-              "document_type": "LEASE_CONTRACT",
-              "landlord_name": "홍길동",
-              "tenant_name": "김철수",
-              "deposit_amount": 30000000,
-              "monthly_rent": 500000,
-              "property_address": "서울특별시 강남구 테헤란로 123",
-              "contract_start_date": "2025-03-01",
-              "contract_end_date": "2027-02-28"
-            },
-            "ai_confidence": 97.52,
-            "issue_date": "2025-03-01",
-            "expiry_date": "2027-02-28",
-            "renewal_date": null,
-            "is_masked": false,
-            "is_favorite": true,
-            "ai_status": "DONE",
-            "is_confirmed": false,
-            "created_at": "2026-06-18T09:30:00Z",
-            "updated_at": "2026-06-18T09:30:12Z",
-            "is_deleted": "N"
-          }
-          ```
-        - 영수증
-          ```json
-          {
-            "receipt_id": "8f5a5c2b-6e7d-4c58-a1f7-92f2c3c5d8f1",
-            "user_id": "f4c8c7c4-8b8f-4b7d-b4d5-5b1f95f0a0c2",
-            "spend_category_id": 1,
-            "input_method": "OCR",
-            "file_url": "receipts/2026/06/18/8f5a5c2b-6e7d-4c58-a1f7-92f2c3c5d8f1.jpg",
-            "store_name": "스타벅스 강남역점",
-            "store_address": "서울특별시 강남구 테헤란로 101",
-            "total_amount": 6500,
-            "purchase_date": "2026-06-18",
-            "payment_item": "아메리카노, 샌드위치",
-            "memo": "회의 전에 간단히 식사",
-            "ocr_text": "스타벅스 강남역점 아메리카노 4500 샌드위치 2000 합계 6500 카드결제",
-            "extracted_data": {
-              "items": [
-                {
-                  "name": "아메리카노",
-                  "quantity": 1,
-                  "unit_price": 4500,
-                  "amount": 4500
-                },
-                {
-                  "name": "샌드위치",
-                  "quantity": 1,
-                  "unit_price": 2000,
-                  "amount": 2000
-                }
-              ],
-              "payment_method": "CARD",
-              "approval_no": "12345678",
-              "_meta": {
-                "confidence": 98.3,
-                "ocr_engine": "PaddleOCR",
-                "model": "gemma3:4b"
-              }
-            },
-            "ai_status": "DONE",
-            "is_confirmed": false,
-            "created_at": "2026-06-18T10:15:00Z",
-            "updated_at": "2026-06-18T10:15:04Z",
-            "is_deleted": "N"
-          }
-          ```
-      - Pydantic 사용해서 DB 스키마양식에 맞도록 validation
-        - 통과하지 못하면 LLM formatting 반복 실행 → 5회
-        - 5회 시도했는데 실패시 분석 실패로 판정하고 `FAILED`
-   4. 분류된 문서 정보 DB 저장
-      - documents 혹은 receits 데이터 DB 저장하기
-      - tempDocuments의 데이터들은 삭제하지 않고 보존
-6. C에서 3~5초 주기로 문서 상태 조회해서 상태 갱신
-   1. GET /uploads/:tempDocumentId
+Redis 큐로부터 `tempDocumentId`를 POP → PaddleOCR로 텍스트 추출 → Ollama(gemma3) 로컬 LLM으로 대분류/세부분류 및 JSON 포매팅 → Pydantic 검증 → `documents` / `receipts` 테이블에 저장하는 비동기 워커 서버를 구현한다.
 
-## 스펙
+**핵심 제약**
 
-- OS: Amazon Linux
-- EC2: t3.medium → 크레딧으로 사용가능한지 확인
-  - swap memory 4GB 걸어서 OOM방지
-- 언어: python
-- 프레임워크: fastAPI
-- ORM: SQLAlchemy Core(Repository Pattern)
-- LLM: Ollama - gemma3:1b(4GB)
-- OCR: PaddleOCR
-- 객체검증: Pydantic
-- 병렬처리, 자원제한
-  - asyncio, ThreadPoolExecutor 사용
-  - 설정값
-    - OCR_WORKER_COUNT = 2
-    - LLM_CONCURRENCY = 1
-    - DB_POOL_SIZE = 2
+- DB 마이그레이션은 NestJS API 서버가 담당. 파이썬 서버는 **조회/수정만** 하고 스키마는 절대 건드리지 않는다 (SQLAlchemy Core, DDL 금지).
+- `tempDocuments` 데이터는 분석 후에도 **삭제하지 않고 보존**.
+- 자원 제한: `OCR_WORKER_COUNT=2`, `LLM_CONCURRENCY=1`, `DB_POOL_SIZE=2` (t3.medium + swap 4GB 환경).
 
-## 주의사항
+## 2. 디렉터리 구조 (Repository Pattern)
 
-- DB의 마이그레이션은 Nestjs API 서버에서 담당하므로 파이썬 워커 서버에서는 조회, 수정만 하고 스키마를 절대 건들지 않는다.
-
-## 내용 상세
-
-- ocrPayload
-
-```json
-{
-  "tempDocumentId": "uuid"
-}
+```
+ocr-server/
+├── app/
+│   ├── __init__.py
+│   ├── config.py            # pydantic-settings 기반 환경설정
+│   ├── main.py              # FastAPI 앱 (상태조회 API + lifespan에서 worker 기동)
+│   ├── worker.py            # Redis 큐 컨슈머 루프 + 동시성 제어
+│   ├── db/
+│   │   └── connection.py    # SQLAlchemy Core engine, pool (DB_POOL_SIZE)
+│   ├── redis/
+│   │   └── connection.py    # redis 클라이언트, BLPOP 래퍼
+│   ├── s3/
+│   │   └── client.py        # boto3, 이미지 다운로드
+│   ├── ocr/
+│   │   └── engine.py        # PaddleOCR 래핑, 텍스트+정확도 평균 반환
+│   ├── llm/
+│   │   └── classifier.py    # Ollama 분류 + JSON 포매팅 + confidence
+│   ├── repositories/
+│   │   ├── documents.py     # documents 조회/수정
+│   │   ├── receipts.py      # receipts 조회/수정
+│   │   ├── categories.py    # 카테고리(대/세부분류) 조회
+│   │   └── dates.py         # issue/expiry/renewal 날짜 처리 헬퍼
+│   ├── routers/
+│   │   ├── documents.py     # GET 상태조회 등
+│   │   └── users.py
+│   ├── models/              # Pydantic 스키마 (document/receipt validation)
+│   │   ├── document.py
+│   │   └── receipt.py
+│   └── services/
+│       └── analysis.py      # 전체 분석 파이프라인 오케스트레이션
+├── dev.py                   # 로컬 개발 실행 진입점
+├── main.py                  # 운영 실행 진입점
+├── requirements.txt         # (작성됨)
+└── .env.example
 ```
 
-### ai_status
+## 3. 작업 단계
 
-- 해당 문서의 AI 서버 작업상태
-  - `PENDING`: 작업요청은 했지만 시작하지 않은 상태
-  - `PROCESSING`: AI 서버가 작업중
-  - `DONE`: AI 작업완료
-  - `FAILED`: 무엇인가의 이유로 작업실패
-- 클라이언트는 문서가 PENDING, PROCESSING 상태일 경우 로딩 UI 보여주기
-- DONE 상태가 되면 그때 부터 수정 가능
-- FAILED 상태가 되면 재분석 요청하기
+### Phase 0 — 기반 셋업
+
+- [ ] `app/config.py`: `pydantic-settings`로 환경변수 로드 (DB/Redis/S3/Ollama URL, 동시성 설정값, confidence 임계치 70, formatting 재시도 5회).
+- [ ] `.env.example` 작성.
+- [ ] `db/connection.py`: SQLAlchemy Core `create_engine`, `pool_size=DB_POOL_SIZE`, `Table` 메타데이터는 `autoload_with`로 **반영만** (DDL 미생성).
+- [ ] `redis/connection.py`: 큐 키 정의, `BLPOP` 기반 POP 래퍼.
+- [ ] `s3/client.py`: boto3로 `tempDocument`의 이미지 다운로드.
+
+### Phase 1 — OCR
+
+- [ ] `ocr/engine.py`: PaddleOCR 인스턴스(워커 프로세스/스레드 재사용), 이미지→텍스트 추출.
+  - 추출 실패 시 예외 → 상위에서 `FAILED` 처리.
+  - 토큰별 정확도(confidence) 전체 평균값 계산해 반환.
+- [ ] `ThreadPoolExecutor(max_workers=OCR_WORKER_COUNT)`로 OCR 실행 (CPU 바운드 격리).
+
+### Phase 2 — LLM 분류 & 포매팅
+
+- [ ] `llm/classifier.py`:
+  - (1) 대분류: `receipt(r)` / `document(d)` 분류 → 세부분류(카테고리) → 미분류 시 document `etc`.
+  - (2) 프롬프트에 `0~100 confidence` 반환 지시.
+  - (3) OCR 평균정확도 + LLM confidence 평균 → `ai_confidence` 계산. **70 미만이면 `FAILED`**.
+  - (4) DB 저장용 JSON 포매팅 (부동산임대차계약서 / 영수증 등 타입별 `extracted_data`).
+- [ ] `LLM_CONCURRENCY=1` → `asyncio.Semaphore(1)`로 직렬화 (OOM 방지).
+- [ ] `categories.py` 리포지토리로 세부분류 매핑 조회.
+
+### Phase 3 — Pydantic 검증 & 재시도
+
+- [ ] `models/document.py`, `models/receipt.py`: DB 스키마(`reference/DocuMate_DB_Schema 최종.xlsx`)에 맞춘 Pydantic 모델.
+- [ ] 검증 실패 시 LLM 포매팅 **최대 5회 재시도**, 모두 실패하면 `FAILED`.
+
+### Phase 4 — DB 저장
+
+- [ ] `repositories/documents.py` / `receipts.py`: 분류 결과를 INSERT/UPDATE (Core, 파라미터 바인딩).
+- [ ] `dates.py`: `issue_date`/`expiry_date`/`renewal_date` 파생 처리.
+- [ ] `tempDocuments`는 보존 (삭제 금지).
+
+### Phase 5 — 워커 & 상태관리
+
+- [ ] `services/analysis.py`: 전체 파이프라인 오케스트레이션.
+  - 시작 시 `ai_status = PROCESSING` 갱신 → 성공 `DONE` / 실패 `FAILED`.
+- [ ] `worker.py`: Redis BLPOP 루프, `tempDocumentId` 수신 → 분석 파이프라인 호출, 동시성 제어 적용.
+- [ ] `ai_status` 상태머신: `PENDING → PROCESSING → DONE | FAILED`.
+
+### Phase 6 — API
+
+- [ ] `routers/documents.py`: `GET /uploads/:tempDocumentId` 상태 조회 (클라이언트 3~5초 폴링용).
+- [ ] `main.py`: FastAPI lifespan에서 워커 태스크 기동/종료, health check.
+
+## 4. 동시성 / 자원 설계
+
+| 구간                | 메커니즘             | 설정값               |
+| ------------------- | -------------------- | -------------------- |
+| OCR (CPU 바운드)    | `ThreadPoolExecutor` | `OCR_WORKER_COUNT=2` |
+| LLM (메모리 바운드) | `asyncio.Semaphore`  | `LLM_CONCURRENCY=1`  |
+| DB                  | SQLAlchemy pool      | `DB_POOL_SIZE=2`     |
+| 큐 소비             | `asyncio` BLPOP 루프 | -                    |
+
+## 5. 실패 처리 규칙 (`FAILED` 판정)
+
+1. OCR 텍스트 추출 실패
+2. `ai_confidence`(OCR+LLM 평균) < 70
+3. Pydantic 검증 5회 재시도 실패
+
+→ 모두 `ai_status = FAILED`로 기록, 클라이언트가 재분석 요청.
+
+## 6. 검증 / 마무리
+
+- [ ] `dev.py`로 로컬 단일 메시지 처리 e2e 테스트 (S3 다운로드 → OCR → LLM → 검증 → DB).
+- [ ] tenacity로 LLM/외부호출 재시도 정책 적용.
+- [ ] 실제 DB 스키마(xlsx) 컬럼명 대조 후 리포지토리/모델 필드 확정.
+
+## 7. 오픈 이슈 / 확인 필요
+
+- t3.medium 크레딧 사용 가능 여부 + swap 4GB 설정.
+- DB 스키마 정확한 컬럼/타입은 `DocuMate_DB_Schema 최종.xlsx` 확인 후 Pydantic 모델에 반영.

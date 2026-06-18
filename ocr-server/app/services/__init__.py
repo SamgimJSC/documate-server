@@ -1,3 +1,3 @@
-from .analysis import analyze
+from .analysis import analyze, AnalysisError
 
-__all__ = ["analyze"]
+__all__ = ["analyze", "AnalysisError"]

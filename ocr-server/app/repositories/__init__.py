@@ -1,20 +1,21 @@
-from .documents import (
-    fetch_document,
-    fetch_files,
+from .temp_documents import (
+    fetch_temp_document,
+    fetch_temp_files,
     mark_processing,
+    mark_done,
     mark_failed,
-    save_document_result,
-    add_activity,
 )
+from .documents import insert_document, add_activity
 from .receipts import insert_receipt
 from .categories import resolve_document_category_id, resolve_spend_category_id
 
 __all__ = [
-    "fetch_document",
-    "fetch_files",
+    "fetch_temp_document",
+    "fetch_temp_files",
     "mark_processing",
+    "mark_done",
     "mark_failed",
-    "save_document_result",
+    "insert_document",
     "add_activity",
     "insert_receipt",
     "resolve_document_category_id",

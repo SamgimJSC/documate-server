@@ -1,5 +1,3 @@
-import psycopg2.extras
-
 from app.db import get_conn
 
 

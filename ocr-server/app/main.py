@@ -16,7 +16,12 @@ async def lifespan(app: FastAPI):
     await close_redis()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="DocuMate OCR Server", lifespan=lifespan)
 
 app.include_router(users.router)
 app.include_router(documents.router)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}

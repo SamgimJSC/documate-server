@@ -13,7 +13,7 @@ async def init_redis() -> None:
         password=settings.REDIS_PASSWORD or None,
         db=settings.REDIS_DB,
         decode_responses=True,
-        protocol=2,
+        protocol=2,  # Redis < 6.0 은 RESP3 HELLO 미지원
     )
     await _client.ping()
 
