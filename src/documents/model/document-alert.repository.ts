@@ -61,4 +61,8 @@ export class TypeOrmDocumentAlertRepository implements DocumentAlertRepository {
     const result = await this.repo.delete({ alertId });
     return (result.affected ?? 0) > 0;
   }
+
+  async deleteByDocumentId(documentId: string): Promise<void> {
+    await this.repo.delete({ documentId });
+  }
 }
