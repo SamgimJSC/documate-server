@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { UploadsService } from './uploads.service';
 import { UploadTempFileDto } from './dto/uploadTempFile.dto';
 import { MAX_FILE_SIZE } from './const/upload.const';
+import { RequestAiAnalyseDto } from './dto/requestAiAnalyse.dto';
 
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
@@ -25,6 +26,11 @@ export class UploadsController {
   @Get('start')
   startUpload(@Req() req: any) {
     return this.uploadsService.startUpload(req.user.userId);
+  }
+
+  @Get('temp-list')
+  getTempDocumentList(@Req() req: any) {
+    return this.uploadsService.getTempDocumentList(req.user.userId);
   }
 
   @Post(':tempDocumentId')
@@ -45,6 +51,19 @@ export class UploadsController {
       tempDocumentId,
       dto.pageNo,
       file,
+    );
+  }
+
+  @Post(':tempDocumentId/ai')
+  requestAi(
+    @Req() req: any,
+    @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
+    @Body() requestAiAnalyseDto: RequestAiAnalyseDto,
+  ) {
+    return this.uploadsService.requestAi(
+      req.user.userId,
+      tempDocumentId,
+      requestAiAnalyseDto,
     );
   }
 }

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TempDocument } from '../entities/temp-document.entity';
 import { TempDocumentRepository } from './temp-document.interface';
+import { AiStatus } from '../../global/constants/aiStatus.enum';
 
 @Injectable()
 export class TypeOrmTempDocumentRepository implements TempDocumentRepository {
@@ -18,5 +19,20 @@ export class TypeOrmTempDocumentRepository implements TempDocumentRepository {
 
   async findById(tempDocumentId: string): Promise<TempDocument | null> {
     return this.repo.findOne({ where: { tempDocumentId } });
+  }
+
+  async findByUserId(userId: string): Promise<TempDocument[]> {
+    return this.repo.find({
+      where: { userId },
+      relations: { tempFiles: true },
+      order: { createdAt: 'DESC', tempFiles: { pageNo: 'ASC' } },
+    });
+  }
+
+  async updateAiStatus(
+    tempDocumentId: string,
+    aiStatus: AiStatus,
+  ): Promise<void> {
+    await this.repo.update({ tempDocumentId }, { aiStatus });
   }
 }

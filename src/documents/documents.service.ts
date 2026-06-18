@@ -73,7 +73,8 @@ export class DocumentsService {
     const document = await this.documentRepository.createDocument({
       ...dto,
       userId,
-      aiStatus: dto.inputMethod === InputMethod.OCR ? AiStatus.PENDING : AiStatus.DONE,
+      aiStatus:
+        dto.inputMethod === InputMethod.OCR ? AiStatus.PENDING : AiStatus.DONE,
       isConfirmed: dto.inputMethod !== InputMethod.OCR,
     });
 
