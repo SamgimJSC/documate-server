@@ -13,4 +13,8 @@ export interface TempFileRepository {
     pageNo: number,
   ): Promise<boolean>;
   findByTempDocumentId(tempDocumentId: string): Promise<TempFile[]>;
+  reorderPages(
+    tempDocumentId: string,
+    orderedFileIds: string[],
+  ): Promise<void>;
 }

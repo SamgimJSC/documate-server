@@ -1,6 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import Redis from 'ioredis';
 import { TypedConfigService } from '../configs/typedConfig.service';
+import { AiStatus } from '../global/constants/aiStatus.enum';
+import { OCR_QUEUE_KEY } from '../redis/redis.const';
 import { UploadTarget } from '../global/constants/uploadTarget.enum';
 import { buildUploadKey } from './utils/buildUploadKey';
 import { UploadedFileResult } from './types/uploadedFileResult.type';
@@ -19,6 +22,7 @@ import { EForbiddenException } from '../global/exceptions/EForbiddenException';
 import { EBadRequestException } from '../global/exceptions/EBadRequestException';
 import { EConflictException } from '../global/exceptions/EConflictException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
+import { RequestAiAnalyseDto } from './dto/requestAiAnalyse.dto';
 
 export interface TempFileItem {
   id: string;
@@ -28,6 +32,13 @@ export interface TempFileItem {
 
 export interface TempUploadResponse {
   tempDocumentId: string;
+  files: TempFileItem[];
+}
+
+export interface TempDocumentListItem {
+  tempDocumentId: string;
+  aiStatus: AiStatus;
+  createdAt: Date;
   files: TempFileItem[];
 }
 
@@ -42,6 +53,7 @@ export class UploadsService {
     private readonly configService: TypedConfigService,
     private readonly tempDocumentRepo: TypeOrmTempDocumentRepository,
     private readonly tempFileRepo: TypeOrmTempFileRepository,
+    @Inject('REDIS_CLIENT') private readonly redis: Redis,
   ) {
     this.region = this.configService.get('AWS_REGION');
     this.bucket = this.configService.get('AWS_S3_BUCKET_NAME');
@@ -224,6 +236,84 @@ export class UploadsService {
         pageNo: f.pageNo,
       })),
     };
+  }
+
+  async getTempDocumentList(userId: string): Promise<TempDocumentListItem[]> {
+    const tempDocs = await this.tempDocumentRepo.findByUserId(userId);
+
+    return tempDocs.map((doc) => ({
+      tempDocumentId: doc.tempDocumentId,
+      aiStatus: doc.aiStatus,
+      createdAt: doc.createdAt,
+      files: (doc.tempFiles ?? []).map((f) => ({
+        id: f.id,
+        fileUrl: f.fileUrl,
+        pageNo: f.pageNo,
+      })),
+    }));
+  }
+
+  async requestAi(
+    userId: string,
+    tempDocumentId: string,
+    requestAiAnalyseDto: RequestAiAnalyseDto,
+  ): Promise<{ tempDocumentId: string; aiStatus: AiStatus }> {
+    const tempDoc = await this.tempDocumentRepo.findById(tempDocumentId);
+    if (!tempDoc) {
+      throw new ENotFoundException({
+        message: '임시 문서를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_FOUND,
+      });
+    }
+    if (tempDoc.userId !== userId) {
+      throw new EForbiddenException({
+        message: '접근 권한이 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_OWNER,
+      });
+    }
+
+    if (tempDoc.aiStatus === AiStatus.PROCESSING) {
+      throw new EConflictException({
+        message: '이미 AI 분석이 진행 중입니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_AI_IN_PROGRESS,
+      });
+    }
+
+    const existingFiles =
+      await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+    if (existingFiles.length === 0) {
+      throw new EBadRequestException({
+        message: '분석할 파일이 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NO_FILES,
+      });
+    }
+
+    // DTO 로 받은 파일 ID 들이 해당 문서의 파일 집합과 정확히 일치하는지 검증한다.
+    const orderedFileIds = requestAiAnalyseDto.files.map((f) => f.id);
+    const existingIds = new Set(existingFiles.map((f) => f.id));
+    const isSameSet =
+      orderedFileIds.length === existingIds.size &&
+      new Set(orderedFileIds).size === orderedFileIds.length &&
+      orderedFileIds.every((id) => existingIds.has(id));
+    if (!isSameSet) {
+      throw new EBadRequestException({
+        message: '페이지 순서 정보가 문서의 파일과 일치하지 않습니다.',
+        errorCode: ERROR_CODE.TEMP_FILE_ORDER_MISMATCH,
+      });
+    }
+
+    // DTO 의 순서대로 page_no 를 1부터 다시 부여한다.
+    await this.tempFileRepo.reorderPages(tempDocumentId, orderedFileIds);
+
+    await this.tempDocumentRepo.updateAiStatus(
+      tempDocumentId,
+      AiStatus.PENDING,
+    );
+
+    // OCR 워커가 BLPOP 으로 소비하므로 RPUSH 로 큐 뒤쪽에 적재(FIFO).
+    await this.redis.rpush(OCR_QUEUE_KEY, JSON.stringify({ tempDocumentId }));
+
+    return { tempDocumentId, aiStatus: AiStatus.PENDING };
   }
 
   private buildFileUrl(fileKey: string): string {

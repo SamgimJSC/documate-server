@@ -38,4 +38,32 @@ export class TypeOrmTempFileRepository implements TempFileRepository {
       order: { pageNo: 'ASC' },
     });
   }
+
+  /**
+   * orderedFileIds 의 순서대로 page_no 를 1부터 다시 부여한다.
+   * (temp_document_id, page_no) UNIQUE 제약 충돌을 피하기 위해
+   * 트랜잭션 안에서 임시 음수값으로 옮긴 뒤 최종값을 부여한다(2-phase).
+   */
+  async reorderPages(
+    tempDocumentId: string,
+    orderedFileIds: string[],
+  ): Promise<void> {
+    await this.repo.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(TempFile);
+
+      for (let i = 0; i < orderedFileIds.length; i++) {
+        await repo.update(
+          { id: orderedFileIds[i], tempDocumentId },
+          { pageNo: -(i + 1) },
+        );
+      }
+
+      for (let i = 0; i < orderedFileIds.length; i++) {
+        await repo.update(
+          { id: orderedFileIds[i], tempDocumentId },
+          { pageNo: i + 1 },
+        );
+      }
+    });
+  }
 }
