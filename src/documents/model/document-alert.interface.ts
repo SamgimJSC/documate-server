@@ -17,4 +17,5 @@ export interface DocumentAlertRepository {
     dto: UpdateDocumentAlertDto,
   ): Promise<DocumentAlert | null>;
   deleteAlert(alertId: string): Promise<boolean>;
+  deleteByDocumentId(documentId: string): Promise<void>;
 }

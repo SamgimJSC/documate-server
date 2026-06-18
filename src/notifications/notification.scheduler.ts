@@ -55,7 +55,7 @@ export class NotificationScheduler {
     // 발송 대상: notify_date <= today AND is_sent = false
     const dueAlerts = await this.documentAlertRepo.find({
       where: { isSent: false, notifyDate: LessThanOrEqual(today) },
-      relations: { document: true }, // 문서 제목 가져오기용
+      relations: { document: true },
     });
      const validAlerts = dueAlerts.filter(a => a.document?.isDeleted !== 'Y');
 
