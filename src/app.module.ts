@@ -20,6 +20,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './redis/redis.module';
 import { ReportsModule } from './reports/reports.module';
+import { SpendCategoriesModule } from './spend-categories/spend-categories.module';
 
 @Module({
   imports: [
@@ -65,6 +66,8 @@ import { ReportsModule } from './reports/reports.module';
     ReceiptsModule,
 
     ReportsModule,
+
+    SpendCategoriesModule,
 
     SubscriptionsModule,
 
