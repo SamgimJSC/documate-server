@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './auth.guard';
 import { ReqUser } from '../global/types/express';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { User } from '../users/entities/user.entity';
+import { ResetPasswordDto } from './dto/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -44,22 +45,17 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { accessToken } = await this.authService.login(body);
-
     res.cookie('X-Access-Token', accessToken, {
       httpOnly: true,
       secure: false, // production 에서는 true로 하기
       sameSite: 'lax',
     });
+    return null;
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post('logout')
-  async logout(
-    @DecoUser() user: User,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    await this.authService.logout(user.userId);
-
-    res.clearCookie('X-Access-Token');
+  @Post('password/reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword(body);
   }
 }
