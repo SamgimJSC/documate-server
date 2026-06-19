@@ -48,8 +48,7 @@ export class Receipt {
 
   @Column({
     name: 'payment_item',
-    type: 'varchar',
-    length: 200,
+    type: 'text',
     nullable: true,
   })
   paymentItem: string | null;

@@ -349,3 +349,7 @@ $RECYCLE.BIN/
 
 .env
 !.env.example
+
+
+# 파이썬
+/venv311
