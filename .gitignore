@@ -444,3 +444,5 @@ $RECYCLE.BIN/
 !.env.example
 
 firebase-service-account.json
+
+.vscode

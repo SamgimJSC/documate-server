@@ -16,8 +16,6 @@ boto3==1.40.11
 
 paddleocr==3.1.0
 paddlepaddle==3.1.0
-# paddleocr 3.1.0 은 paddlex 버전을 고정하지 않아 최신(3.7.x)이 설치되면
-# PaddlePredictorOption 시그니처 변경으로 깨진다. 호환되는 3.1.x 로 고정.
 paddlex==3.1.4
 pillow==11.3.0
 numpy==2.2.6
