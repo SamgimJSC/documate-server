@@ -120,15 +120,12 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
     userId: string,
     dto: UpdateDocumentDto,
   ): Promise<Document | null> {
-    const document = await this.findByDocumentIdAndUserId(
-      documentId,
-      userId,
-      true,
-    );
+    const document = await this.findByDocumentIdAndUserId(documentId, userId);
     if (!document) return null;
 
     Object.assign(document, dto);
-    return this.repo.save(document);
+    await this.repo.save(document);
+    return this.findByDocumentIdAndUserId(documentId, userId, true);
   }
 
   async softDeleteDocumentByUserId(

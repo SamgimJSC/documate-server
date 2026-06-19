@@ -19,6 +19,7 @@ import { AddDocumentTagDto } from './dto/addDocumentTag.dto';
 import { ReorderDocumentFilesDto } from './dto/reorderDocumentFiles.dto';
 import { CreateAlertRequestDto } from './dto/createAlertRequest.dto';
 import { UpdateAlertRequestDto } from './dto/updateAlertRequest.dto';
+import { UpdateDocumentCategoryDto } from './dto/updateDocumentCategory.dto';
 import { Document } from './entities/document.entity';
 import { DocumentCategory } from './entities/document-category.entity';
 import { DocumentFile } from './entities/document-file.entity';
@@ -48,6 +49,17 @@ export class DocumentsService {
 
   async getCategories(): Promise<DocumentCategory[]> {
     return this.documentCategoryRepository.findAll();
+  }
+
+  async updateCategory(categoryId: number, dto: UpdateDocumentCategoryDto): Promise<DocumentCategory> {
+    const updated = await this.documentCategoryRepository.updateById(categoryId, dto);
+    if (!updated) {
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_CATEGORY_NOT_FOUND,
+        message: '존재하지 않는 카테고리입니다.',
+      });
+    }
+    return updated;
   }
 
   async getTags(userId: string): Promise<Tag[]> {
