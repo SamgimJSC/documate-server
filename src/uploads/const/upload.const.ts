@@ -1,10 +1,7 @@
 import { FileType } from '../../global/constants/fileType.enum';
 import { DOCUMENT_MAX_FILES_PER_DOCUMENT } from '../../global/constants/document-limit.const';
 
-export const ALLOWED_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-] as const;
+export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'] as const;
 
 export const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png']);
 

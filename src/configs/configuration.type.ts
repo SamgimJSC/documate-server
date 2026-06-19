@@ -17,6 +17,10 @@ export type EnvConfigType = {
   NODE_MAILER_USER: string;
   NODE_MAILER_PASS: string;
 
+  REDIS_HOST: string;
+  REDIS_PORT: number;
+  REDIS_PASSWORD?: string;
+
   // AWS S3 설정 — 파일 업로드 기능 사용 시 .env에 반드시 추가 필요 (.env.example 참고)
   AWS_REGION: string;
   AWS_S3_BUCKET_NAME: string;

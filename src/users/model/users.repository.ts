@@ -7,6 +7,8 @@ import { UserRepository } from './users.interface';
 import { CreateUserDto } from '../dto/createUser.dto';
 import { GetUsersQueryDto } from '../dto/getUsersQuery.dto';
 import { UpdateUserDto } from '../dto/updateUser.dto';
+import { UserPlan } from '../../global/constants/userPlan.enum';
+import { STORAGE_QUOTA_BYTES } from '../../global/constants/storageQuota.const';
 
 @Injectable()
 export class TypeOrmUserRepository implements UserRepository {
@@ -16,14 +18,18 @@ export class TypeOrmUserRepository implements UserRepository {
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.repo.create(createUserDto);
+    const user = this.repo.create({
+      ...createUserDto,
+      storageUsedBytes: '0',
+      storageQuotaBytes: STORAGE_QUOTA_BYTES[UserPlan.FREE],
+    });
     return this.repo.save(user);
   }
 
   async findAll(query: GetUsersQueryDto): Promise<User[]> {
     const qb = this.repo
       .createQueryBuilder('user')
-      .where('user.isDeleted = :isDeleted', { isDeleted: 'N' });
+      .where('user.isDeleted = :isDeleted', { isDeleted: false });
 
     if (query.email) {
       qb.andWhere('user.email ILIKE :email', { email: `%${query.email}%` });

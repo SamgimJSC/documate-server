@@ -6,6 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { TempFile } from './temp-file.entity';
+import { AiStatus } from '../../global/constants/aiStatus.enum';
 
 @Entity('temp_documents')
 export class TempDocument {
@@ -14,6 +15,14 @@ export class TempDocument {
 
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
+
+  @Column({
+    name: 'ai_status',
+    type: 'enum',
+    enum: AiStatus,
+    default: AiStatus.PENDING,
+  })
+  aiStatus: AiStatus;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

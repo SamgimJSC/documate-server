@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsDateString,
   IsObject,
+  IsBoolean,
   MaxLength,
   Min,
   Max,
@@ -48,4 +49,8 @@ export class UpdateDocumentDto {
   @IsOptional()
   @IsDateString()
   renewalDate?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  isConfirmed?: boolean;
 }

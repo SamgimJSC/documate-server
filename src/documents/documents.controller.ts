@@ -22,6 +22,7 @@ import { ReorderDocumentFilesDto } from './dto/reorderDocumentFiles.dto';
 import { CreateAlertRequestDto } from './dto/createAlertRequest.dto';
 import { UpdateAlertRequestDto } from './dto/updateAlertRequest.dto';
 
+@UseGuards(JwtAuthGuard)
 @Controller('documents')
 @UseGuards(JwtAuthGuard)
 export class DocumentsController {
