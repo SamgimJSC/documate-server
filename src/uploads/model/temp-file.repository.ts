@@ -39,6 +39,23 @@ export class TypeOrmTempFileRepository implements TempFileRepository {
     });
   }
 
+  async setPageOrders(
+    tempDocumentId: string,
+    files: { id: string; pageNo: number }[],
+  ): Promise<void> {
+    await this.repo.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(TempFile);
+
+      for (const f of files) {
+        await repo.update({ id: f.id, tempDocumentId }, { pageNo: -f.pageNo });
+      }
+
+      for (const f of files) {
+        await repo.update({ id: f.id, tempDocumentId }, { pageNo: f.pageNo });
+      }
+    });
+  }
+
   /**
    * orderedFileIds 의 순서대로 page_no 를 1부터 다시 부여한다.
    * (temp_document_id, page_no) UNIQUE 제약 충돌을 피하기 위해

@@ -23,6 +23,7 @@ import { EBadRequestException } from '../global/exceptions/EBadRequestException'
 import { EConflictException } from '../global/exceptions/EConflictException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { RequestAiAnalyseDto } from './dto/requestAiAnalyse.dto';
+import { ReorderTempFilesDto } from './dto/reorderTempFiles.dto';
 
 export interface TempFileItem {
   id: string;
@@ -253,10 +254,52 @@ export class UploadsService {
     }));
   }
 
+  async reorderTempFiles(
+    userId: string,
+    tempDocumentId: string,
+    dto: ReorderTempFilesDto,
+  ): Promise<TempUploadResponse> {
+    const tempDoc = await this.tempDocumentRepo.findById(tempDocumentId);
+    if (!tempDoc) {
+      throw new ENotFoundException({
+        message: '임시 문서를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_FOUND,
+      });
+    }
+    if (tempDoc.userId !== userId) {
+      throw new EForbiddenException({
+        message: '접근 권한이 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_OWNER,
+      });
+    }
+
+    const existingFiles = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+    const orderedFileIds = dto.files.map((f) => f.id);
+    const existingIds = new Set(existingFiles.map((f) => f.id));
+    const isSameSet =
+      orderedFileIds.length === existingIds.size &&
+      new Set(orderedFileIds).size === orderedFileIds.length &&
+      orderedFileIds.every((id) => existingIds.has(id));
+    if (!isSameSet) {
+      throw new EBadRequestException({
+        message: '파일 목록이 일치하지 않습니다.',
+        errorCode: ERROR_CODE.TEMP_FILE_ORDER_MISMATCH,
+      });
+    }
+
+    await this.tempFileRepo.setPageOrders(tempDocumentId, dto.files);
+
+    const allFiles = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+    return {
+      tempDocumentId,
+      files: allFiles.map((f) => ({ id: f.id, fileUrl: f.fileUrl, pageNo: f.pageNo })),
+    };
+  }
+
   async requestAi(
     userId: string,
     tempDocumentId: string,
-    requestAiAnalyseDto: RequestAiAnalyseDto,
+    dto: RequestAiAnalyseDto,
   ): Promise<{ tempDocumentId: string; aiStatus: AiStatus }> {
     const tempDoc = await this.tempDocumentRepo.findById(tempDocumentId);
     if (!tempDoc) {
@@ -288,8 +331,7 @@ export class UploadsService {
       });
     }
 
-    // DTO 로 받은 파일 ID 들이 해당 문서의 파일 집합과 정확히 일치하는지 검증한다.
-    const orderedFileIds = requestAiAnalyseDto.files.map((f) => f.id);
+    const orderedFileIds = dto.files.map((f) => f.id);
     const existingIds = new Set(existingFiles.map((f) => f.id));
     const isSameSet =
       orderedFileIds.length === existingIds.size &&
@@ -302,8 +344,7 @@ export class UploadsService {
       });
     }
 
-    // DTO 의 순서대로 page_no 를 1부터 다시 부여한다.
-    await this.tempFileRepo.reorderPages(tempDocumentId, orderedFileIds);
+    await this.tempFileRepo.setPageOrders(tempDocumentId, dto.files);
 
     await this.tempDocumentRepo.updateAiStatus(
       tempDocumentId,

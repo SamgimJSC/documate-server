@@ -130,18 +130,18 @@ export class DocumentsController {
     );
   }
 
-  @Patch(':documentId/files/reorder')
-  reorderDocumentFiles(
-    @Req() req: any,
-    @Param('documentId', ParseUUIDPipe) documentId: string,
-    @Body() dto: ReorderDocumentFilesDto,
-  ) {
-    return this.documentsService.reorderDocumentFiles(
-      documentId,
-      req.user.userId,
-      dto,
-    );
-  }
+  // @Patch(':documentId/files/reorder')
+  // reorderDocumentFiles(
+  //   @Req() req: any,
+  //   @Param('documentId', ParseUUIDPipe) documentId: string,
+  //   @Body() dto: ReorderDocumentFilesDto,
+  // ) {
+  //   return this.documentsService.reorderDocumentFiles(
+  //     documentId,
+  //     req.user.userId,
+  //     dto,
+  //   );
+  // }
 
   @Get(':documentId/ai-status')
   getDocumentAiStatus(
