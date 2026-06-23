@@ -14,7 +14,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
+        // 1순위: 쿠키 (웹)
         (req: Request) => req?.cookies?.['X-Access-Token'],
+        // 2순위: Authorization 헤더의 Bearer 토큰 (앱)
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
       ignoreExpiration: true,
       secretOrKey: configService.get('JWT_SECRET'),
