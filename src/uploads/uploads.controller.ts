@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Patch,
   Param,
   ParseUUIDPipe,
   Post,
@@ -17,6 +18,7 @@ import { UploadsService } from './uploads.service';
 import { UploadTempFileDto } from './dto/uploadTempFile.dto';
 import { MAX_FILE_SIZE } from './const/upload.const';
 import { RequestAiAnalyseDto } from './dto/requestAiAnalyse.dto';
+import { ReorderTempFilesDto } from './dto/reorderTempFiles.dto';
 
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
@@ -52,6 +54,15 @@ export class UploadsController {
       dto.pageNo,
       file,
     );
+  }
+
+  @Patch(':tempDocumentId/reorder')
+  reorderTempFiles(
+    @Req() req: any,
+    @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
+    @Body() dto: ReorderTempFilesDto,
+  ) {
+    return this.uploadsService.reorderTempFiles(req.user.userId, tempDocumentId, dto);
   }
 
   @Post(':tempDocumentId/ai')

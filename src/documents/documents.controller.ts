@@ -10,11 +10,13 @@ import {
   Req,
   UseGuards,
   ParseUUIDPipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/createDocument.dto';
 import { UpdateDocumentDto } from './dto/updateDocument.dto';
+import { UpdateDocumentCategoryDto } from './dto/updateDocumentCategory.dto';
 import { GetDocumentsQueryDto } from './dto/getDocumentsQuery.dto';
 import { ToggleFavoriteDto } from './dto/toggleFavorite.dto';
 import { AddDocumentTagDto } from './dto/addDocumentTag.dto';
@@ -33,6 +35,14 @@ export class DocumentsController {
   @Get('categories')
   getCategories() {
     return this.documentsService.getCategories();
+  }
+
+  @Patch('categories/:categoryId')
+  updateCategory(
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+    @Body() dto: UpdateDocumentCategoryDto,
+  ) {
+    return this.documentsService.updateCategory(categoryId, dto);
   }
 
   @Get('tags')
@@ -120,18 +130,18 @@ export class DocumentsController {
     );
   }
 
-  @Patch(':documentId/files/reorder')
-  reorderDocumentFiles(
-    @Req() req: any,
-    @Param('documentId', ParseUUIDPipe) documentId: string,
-    @Body() dto: ReorderDocumentFilesDto,
-  ) {
-    return this.documentsService.reorderDocumentFiles(
-      documentId,
-      req.user.userId,
-      dto,
-    );
-  }
+  // @Patch(':documentId/files/reorder')
+  // reorderDocumentFiles(
+  //   @Req() req: any,
+  //   @Param('documentId', ParseUUIDPipe) documentId: string,
+  //   @Body() dto: ReorderDocumentFilesDto,
+  // ) {
+  //   return this.documentsService.reorderDocumentFiles(
+  //     documentId,
+  //     req.user.userId,
+  //     dto,
+  //   );
+  // }
 
   @Get(':documentId/ai-status')
   getDocumentAiStatus(
