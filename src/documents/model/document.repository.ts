@@ -52,6 +52,7 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
   ): Promise<[Document[], number]> {
     const {
       keyword,
+      searchField,
       categoryId,
       fileType,
       aiStatus,
@@ -75,9 +76,31 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
       .andWhere('d.isDeleted = false');
 
     if (keyword) {
-      qb.andWhere('(d.title ILIKE :keyword OR d.ocrText ILIKE :keyword)', {
-        keyword: `%${keyword}%`,
-      });
+      if (searchField === 'title') {
+        qb.andWhere('d.title ILIKE :keyword', { keyword: `%${keyword}%` });
+      } else if (searchField === 'ocr') {
+        qb.andWhere('d.ocrText ILIKE :keyword', { keyword: `%${keyword}%` });
+      } else if (searchField === 'tag') {
+        qb.andWhere(
+          `EXISTS (
+            SELECT 1 FROM document_tags dt3
+            JOIN tags t ON t.tag_id = dt3.tag_id
+            WHERE dt3.document_id = d.document_id
+            AND t.name ILIKE :keyword
+          )`,
+          { keyword: `%${keyword}%` },
+        );
+      } else {
+        qb.andWhere(
+          `(d.title ILIKE :keyword OR d.ocrText ILIKE :keyword OR EXISTS (
+            SELECT 1 FROM document_tags dt3
+            JOIN tags t ON t.tag_id = dt3.tag_id
+            WHERE dt3.document_id = d.document_id
+            AND t.name ILIKE :keyword
+          ))`,
+          { keyword: `%${keyword}%` },
+        );
+      }
     }
 
     if (categoryId !== undefined) {

@@ -23,6 +23,10 @@ export class GetDocumentsQueryDto {
   keyword?: string;
 
   @IsOptional()
+  @IsIn(['title', 'tag', 'ocr'])
+  searchField?: 'title' | 'tag' | 'ocr';
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   categoryId?: number;
