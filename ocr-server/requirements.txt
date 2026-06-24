@@ -20,6 +20,9 @@ paddlex==3.1.4
 pillow==11.3.0
 numpy==2.2.6
 
+# paddlepaddle 가 런타임에 import 하지만 Python 3.12+ venv 에는 기본 포함되지 않음
+setuptools==82.0.1
+
 ollama==0.5.3
 
 python-dotenv==1.1.1
