@@ -148,6 +148,7 @@ def _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confide
         issue_date=result["issue_date"],
         expiry_date=result["expiry_date"],
         renewal_date=result["renewal_date"],
+        files=files,
     )
     repo.add_activity(document_id, "AI_ANALYZED", "AI 문서 분석 완료")
 

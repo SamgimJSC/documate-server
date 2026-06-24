@@ -17,10 +17,14 @@ def insert_document(
     issue_date: str | None,
     expiry_date: str | None,
     renewal_date: str | None,
+    files: list[dict],
 ) -> str:
-    """분석 결과로 documents 행을 새로 생성하고 document_id 를 반환한다.
+    """분석 결과로 documents 행과 document_files 행들을 한 트랜잭션으로 생성하고
+    document_id 를 반환한다.
 
     ai_status 는 DONE 으로 마감한다. (temp_documents 는 별도로 보존/갱신)
+    files 는 temp_files 에서 조회한 {file_url, page_no} 목록으로,
+    document_files 로 복사된다.
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -55,6 +59,15 @@ def insert_document(
                 ),
             )
             document_id = cur.fetchone()[0]
+
+            if files:
+                cur.executemany(
+                    """
+                    INSERT INTO document_files (document_id, file_url, page_no)
+                    VALUES (%s, %s, %s)
+                    """,
+                    [(document_id, f["file_url"], f["page_no"]) for f in files],
+                )
     return str(document_id)
 
 
