@@ -8,10 +8,12 @@ import {
   Param,
   Query,
   Req,
+  Res,
   UseGuards,
   ParseUUIDPipe,
   ParseIntPipe,
 } from '@nestjs/common';
+import { type Response } from 'express';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/createDocument.dto';
@@ -142,6 +144,18 @@ export class DocumentsController {
   //     dto,
   //   );
   // }
+
+  @Get(':documentId/download')
+  async downloadDocumentAsPdf(
+    @Req() req: any,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.documentsService.generatePdf(documentId, req.user.userId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${documentId}.pdf"`);
+    res.send(pdf);
+  }
 
   @Get(':documentId/ai-status')
   getDocumentAiStatus(
