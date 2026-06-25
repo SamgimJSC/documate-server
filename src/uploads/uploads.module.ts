@@ -7,6 +7,7 @@ import { TempDocument } from './entities/temp-document.entity';
 import { TempFile } from './entities/temp-file.entity';
 import { TypeOrmTempDocumentRepository } from './model/temp-document.repository';
 import { TypeOrmTempFileRepository } from './model/temp-file.repository';
+import { TempDocumentCleanupScheduler } from './temp-document-cleanup.scheduler';
 
 @Module({
   imports: [AuthModule, TypeOrmModule.forFeature([TempDocument, TempFile])],
@@ -15,6 +16,7 @@ import { TypeOrmTempFileRepository } from './model/temp-file.repository';
     UploadsService,
     TypeOrmTempDocumentRepository,
     TypeOrmTempFileRepository,
+    TempDocumentCleanupScheduler,
   ],
   exports: [UploadsService],
 })

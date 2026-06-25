@@ -6,6 +6,10 @@ import {
   IsNumber,
   IsDateString,
   IsObject,
+  IsArray,
+  IsUrl,
+  ValidateNested,
+  ArrayNotEmpty,
   MaxLength,
   Min,
   Max,
@@ -13,6 +17,15 @@ import {
 import { Type } from 'class-transformer';
 import { FileType } from '../../global/constants/fileType.enum';
 import { InputMethod } from '../../global/constants/inputMethod.enum';
+
+export class DocumentFileDto {
+  @IsUrl()
+  fileUrl: string;
+
+  @IsInt()
+  @Min(1)
+  pageNo: number;
+}
 
 export class CreateDocumentDto {
   @IsEnum(InputMethod)
@@ -67,4 +80,11 @@ export class CreateDocumentDto {
   @IsOptional()
   @IsDateString()
   renewalDate?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => DocumentFileDto)
+  files?: DocumentFileDto[];
 }

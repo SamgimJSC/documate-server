@@ -92,6 +92,16 @@ export class DocumentsService {
       isConfirmed: dto.inputMethod !== InputMethod.OCR,
     });
 
+    if (dto.files && dto.files.length > 0) {
+      for (const file of dto.files) {
+        await this.documentFileRepository.insert({
+          documentId: document.documentId,
+          fileUrl: file.fileUrl,
+          pageNo: file.pageNo,
+        });
+      }
+    }
+
     await this.documentActivityRepository.createActivity({
       documentId: document.documentId,
       activityType: DocumentActivityType.UPLOAD,
