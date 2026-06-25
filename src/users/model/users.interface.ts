@@ -12,5 +12,7 @@ export interface UserRepository {
     userId: string,
     updateUserDto: UpdateUserDto,
   ): Promise<User | null>;
+  incrementStorageUsedBytes(userId: string, bytes: number): Promise<void>;
+  decrementStorageUsedBytes(userId: string, bytes: number): Promise<void>;
   softDeleteUser(userId: string, withdrawalReason?: string): Promise<boolean>;
 }

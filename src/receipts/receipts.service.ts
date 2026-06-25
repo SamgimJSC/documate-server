@@ -9,12 +9,14 @@ import { GetReceiptsQueryDto } from './dto/getReceiptsQuery.dto';
 import { UpdateReceiptRequestDto } from './dto/updateReceiptRequest.dto';
 import { Receipt } from './entities/receipt.entity';
 import { AiStatus } from '../global/constants/aiStatus.enum';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class ReceiptsService {
   constructor(
     @Inject(TypeOrmReceiptRepository)
     private readonly receiptRepo: ReceiptRepository,
+    private readonly usersService: UsersService,
   ) {}
 
   /*
@@ -29,6 +31,7 @@ export class ReceiptsService {
     return this.receiptRepo.createReceipt({
       ...dto,
       userId,
+      fileSizeBytes: String(dto.fileSizeBytes ?? 0),
       purchaseDate: new Date(dto.purchaseDate),
       aiStatus: AiStatus.DONE,
       isConfirmed: dto.isConfirmed ?? true,
@@ -115,9 +118,15 @@ export class ReceiptsService {
     - 본인 영수증만 삭제 가능
   */
   async removeReceipt(userId: string, receiptId: string): Promise<void> {
-    await this.getOwnedReceipt(userId, receiptId);
+    const receipt = await this.getOwnedReceipt(userId, receiptId);
 
     await this.receiptRepo.softDeleteReceipt(receiptId);
+
+    // 사용 용량에서 영수증 파일 크기만큼 차감 (음수 방지는 repository 에서 처리)
+    const bytes = Number(receipt.fileSizeBytes ?? 0);
+    if (bytes > 0) {
+      await this.usersService.subtractStorageUsedBytes(userId, bytes);
+    }
   }
 
   /*

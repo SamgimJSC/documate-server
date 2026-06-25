@@ -8,9 +8,14 @@ import { TempFile } from './entities/temp-file.entity';
 import { TypeOrmTempDocumentRepository } from './model/temp-document.repository';
 import { TypeOrmTempFileRepository } from './model/temp-file.repository';
 import { TempDocumentCleanupScheduler } from './temp-document-cleanup.scheduler';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([TempDocument, TempFile])],
+  imports: [
+    AuthModule,
+    UsersModule,
+    TypeOrmModule.forFeature([TempDocument, TempFile]),
+  ],
   controllers: [UploadsController],
   providers: [
     UploadsService,
