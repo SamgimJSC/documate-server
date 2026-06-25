@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import Redis from 'ioredis';
 import { TypedConfigService } from '../configs/typedConfig.service';
@@ -24,6 +24,7 @@ import { EConflictException } from '../global/exceptions/EConflictException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { RequestAiAnalyseDto } from './dto/requestAiAnalyse.dto';
 import { ReorderTempFilesDto } from './dto/reorderTempFiles.dto';
+import { UsersService } from '../users/users.service';
 
 export interface TempFileItem {
   id: string;
@@ -45,6 +46,7 @@ export interface TempDocumentListItem {
 
 @Injectable()
 export class UploadsService {
+  private readonly logger = new Logger(UploadsService.name);
   private readonly s3: S3Client;
   private readonly bucket: string;
   private readonly region: string;
@@ -54,6 +56,7 @@ export class UploadsService {
     private readonly configService: TypedConfigService,
     private readonly tempDocumentRepo: TypeOrmTempDocumentRepository,
     private readonly tempFileRepo: TypeOrmTempFileRepository,
+    private readonly usersService: UsersService,
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
   ) {
     this.region = this.configService.get('AWS_REGION');
@@ -114,6 +117,8 @@ export class UploadsService {
     );
 
     const fileUrl = this.buildFileUrl(fileKey);
+
+    await this.addUserStorageUsage(userId, file.size);
 
     return {
       fileUrl,
@@ -226,6 +231,8 @@ export class UploadsService {
       throw e;
     }
 
+    await this.addUserStorageUsage(userId, file.size);
+
     const allFiles =
       await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
 
@@ -273,7 +280,8 @@ export class UploadsService {
       });
     }
 
-    const existingFiles = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+    const existingFiles =
+      await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
     const orderedFileIds = dto.files.map((f) => f.id);
     const existingIds = new Set(existingFiles.map((f) => f.id));
     const isSameSet =
@@ -289,10 +297,15 @@ export class UploadsService {
 
     await this.tempFileRepo.setPageOrders(tempDocumentId, dto.files);
 
-    const allFiles = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+    const allFiles =
+      await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
     return {
       tempDocumentId,
-      files: allFiles.map((f) => ({ id: f.id, fileUrl: f.fileUrl, pageNo: f.pageNo })),
+      files: allFiles.map((f) => ({
+        id: f.id,
+        fileUrl: f.fileUrl,
+        pageNo: f.pageNo,
+      })),
     };
   }
 
@@ -355,6 +368,25 @@ export class UploadsService {
     await this.redis.rpush(OCR_QUEUE_KEY, JSON.stringify({ tempDocumentId }));
 
     return { tempDocumentId, aiStatus: AiStatus.PENDING };
+  }
+
+  /**
+   * 신규 업로드한 파일 용량만큼 users.storage_used_bytes 를 증분 갱신한다.
+   * 기존 값이 정확하다는 전제하에 DB 레벨 원자적 증가(+=)로 처리해 동시 업로드 경합을 피한다.
+   * 업로드 자체는 이미 완료된 상태이므로, 갱신 실패가 응답을 막지 않도록 예외는 로깅만 한다.
+   */
+  private async addUserStorageUsage(
+    userId: string,
+    bytes: number,
+  ): Promise<void> {
+    try {
+      await this.usersService.addStorageUsedBytes(userId, bytes);
+    } catch (e) {
+      this.logger.error(
+        `storage_used_bytes 갱신 실패 (userId=${userId})`,
+        e instanceof Error ? e.stack : String(e),
+      );
+    }
   }
 
   private buildFileUrl(fileKey: string): string {

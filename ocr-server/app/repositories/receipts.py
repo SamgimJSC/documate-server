@@ -11,6 +11,7 @@ def insert_receipt(
     user_id: str,
     spend_category_id: int | None,
     file_url: str | None,
+    file_size_bytes: int,
     store_name: str | None,
     store_address: str | None,
     total_amount: float | None,
@@ -31,12 +32,12 @@ def insert_receipt(
             cur.execute(
                 """
                 INSERT INTO receipts (
-                    user_id, spend_category_id, input_method, file_url,
+                    user_id, spend_category_id, input_method, file_url, file_size_bytes,
                     store_name, store_address, total_amount, purchase_date,
                     payment_item, ocr_text, extracted_data, ai_status, is_confirmed
                 )
                 VALUES (
-                    %s, %s, 'OCR', %s,
+                    %s, %s, 'OCR', %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s, 'DONE', false
                 )
@@ -46,6 +47,7 @@ def insert_receipt(
                     user_id,
                     spend_category_id,
                     file_url,
+                    file_size_bytes,
                     store_name or "미상",
                     store_address,
                     total_amount if total_amount is not None else 0,

@@ -6,6 +6,7 @@ export class CreateReceiptDto {
   spendCategoryId?: number | null;
   inputMethod: InputMethod;
   fileUrl?: string | null;
+  fileSizeBytes?: string;
   storeName: string;
   storeAddress?: string | null;
   totalAmount: number;

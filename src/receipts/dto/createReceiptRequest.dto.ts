@@ -27,6 +27,12 @@ export class CreateReceiptRequestDto {
   @MaxLength(500)
   fileUrl?: string | null;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  fileSizeBytes?: number;
+
   @IsString()
   @MaxLength(100)
   storeName: string;

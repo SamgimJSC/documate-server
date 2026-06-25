@@ -66,7 +66,7 @@ def analyze(temp_document_id: str) -> None:
 
     # 4) DB 저장 (새 행 생성)
     if result["type"] == "RECEIPT":
-        _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence)
+        _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence, total_bytes)
     else:
         _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confidence, total_bytes)
 
@@ -157,7 +157,7 @@ def _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confide
     repo.add_activity(document_id, "AI_ANALYZED", "AI 문서 분석 완료")
 
 
-def _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence) -> None:
+def _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence, total_bytes) -> None:
     spend_category_id = repo.resolve_spend_category_id(result["spend_category_name"])
     file_url = files[0]["file_url"] if files else None
 
@@ -165,6 +165,7 @@ def _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confiden
         user_id=temp_doc["user_id"],
         spend_category_id=spend_category_id,
         file_url=file_url,
+        file_size_bytes=total_bytes,
         store_name=result["store_name"],
         store_address=result["store_address"],
         total_amount=result["total_amount"],

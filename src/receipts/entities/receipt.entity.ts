@@ -29,6 +29,11 @@ export class Receipt {
   @Column({ name: 'file_url', type: 'varchar', length: 500, nullable: true })
   fileUrl: string | null;
 
+  // synchronize: false 환경에서는 아래 컬럼을 마이그레이션으로 적용해야 합니다.
+  // ALTER TABLE receipts ADD COLUMN file_size_bytes bigint NOT NULL DEFAULT 0;
+  @Column({ name: 'file_size_bytes', type: 'bigint', default: 0 })
+  fileSizeBytes: string;
+
   @Column({ name: 'store_name', type: 'varchar', length: 100 })
   storeName: string;
 
