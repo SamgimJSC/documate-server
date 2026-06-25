@@ -33,6 +33,8 @@ import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { EConflictException } from '../global/exceptions/EConflictException';
 import { EBadRequestException } from '../global/exceptions/EBadRequestException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
+import { PDFDocument } from 'pdf-lib';
+import axios from 'axios';
 
 @Injectable()
 export class DocumentsService {
@@ -514,5 +516,41 @@ export class DocumentsService {
       });
     }
     return result;
+  }
+
+  async generatePdf(documentId: string, userId: string): Promise<Buffer> {
+    const document = await this.documentRepository.findByDocumentIdAndUserId(documentId, userId, true);
+    if (!document) {
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
+        message: '존재하지 않는 문서입니다.',
+      });
+    }
+
+    const files = (document.documentFiles ?? []).sort((a, b) => a.pageNo - b.pageNo);
+    if (files.length === 0) {
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
+        message: '다운로드할 파일이 없습니다.',
+      });
+    }
+
+    const pdfDoc = await PDFDocument.create();
+
+    for (const file of files) {
+      const response = await axios.get<ArrayBuffer>(file.fileUrl, { responseType: 'arraybuffer' });
+      const imageBytes = new Uint8Array(response.data);
+
+      const isJpeg = file.fileUrl.toLowerCase().endsWith('.jpg') || file.fileUrl.toLowerCase().endsWith('.jpeg');
+      const image = isJpeg
+        ? await pdfDoc.embedJpg(imageBytes)
+        : await pdfDoc.embedPng(imageBytes);
+
+      const page = pdfDoc.addPage([image.width, image.height]);
+      page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
   }
 }
