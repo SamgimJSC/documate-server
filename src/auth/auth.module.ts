@@ -34,6 +34,6 @@ import { NodeMailer } from './providors/nodeMailer';
     TypeOrmEmailVerificationRepository,
     TypeOrmAuthTokenRepository,
   ],
-  exports: [AuthService, JwtModule, JwtAuthGuard],
+  exports: [AuthService, JwtModule, JwtAuthGuard, NodeMailer],
 })
 export class AuthModule {}

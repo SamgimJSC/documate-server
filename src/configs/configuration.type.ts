@@ -16,6 +16,7 @@ export type EnvConfigType = {
 
   NODE_MAILER_USER: string;
   NODE_MAILER_PASS: string;
+  WEB_URL: string;
 
   REDIS_HOST: string;
   REDIS_PORT: number;
