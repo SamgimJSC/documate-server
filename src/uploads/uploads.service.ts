@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import Redis from 'ioredis';
 import { TypedConfigService } from '../configs/typedConfig.service';
 import { AiStatus } from '../global/constants/aiStatus.enum';
@@ -355,6 +355,12 @@ export class UploadsService {
     await this.redis.rpush(OCR_QUEUE_KEY, JSON.stringify({ tempDocumentId }));
 
     return { tempDocumentId, aiStatus: AiStatus.PENDING };
+  }
+
+  async deleteS3File(fileUrl: string): Promise<void> {
+    const urlObj = new URL(fileUrl);
+    const fileKey = decodeURIComponent(urlObj.pathname.slice(1));
+    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: fileKey }));
   }
 
   private buildFileUrl(fileKey: string): string {
