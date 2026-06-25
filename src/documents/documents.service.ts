@@ -36,6 +36,7 @@ import { EBadRequestException } from '../global/exceptions/EBadRequestException'
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { PDFDocument } from 'pdf-lib';
 import axios from 'axios';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class DocumentsService {
@@ -48,6 +49,7 @@ export class DocumentsService {
     private readonly documentTagRepository: TypeOrmDocumentTagRepository,
     private readonly documentActivityRepository: TypeOrmDocumentActivityRepository,
     private readonly documentAlertRepository: TypeOrmDocumentAlertRepository,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   async getCategories(): Promise<DocumentCategory[]> {
@@ -92,6 +94,16 @@ export class DocumentsService {
         dto.inputMethod === InputMethod.OCR ? AiStatus.PENDING : AiStatus.DONE,
       isConfirmed: dto.inputMethod !== InputMethod.OCR,
     });
+
+    if (dto.files && dto.files.length > 0) {
+      for (const file of dto.files) {
+        await this.documentFileRepository.insert({
+          documentId: document.documentId,
+          fileUrl: file.fileUrl,
+          pageNo: file.pageNo,
+        });
+      }
+    }
 
     await this.documentActivityRepository.createActivity({
       documentId: document.documentId,
@@ -202,6 +214,15 @@ export class DocumentsService {
         errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
         message: '존재하지 않는 문서입니다.',
       });
+    }
+
+    const files = await this.documentFileRepository.findByDocumentId(documentId);
+    for (const file of files) {
+      try {
+        await this.uploadsService.deleteS3File(file.fileUrl);
+      } catch (e) {
+        // S3 삭제 실패해도 DB 삭제는 진행
+      }
     }
 
     await this.dataSource.transaction(async (em) => {

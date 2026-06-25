@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { TempDocument } from '../entities/temp-document.entity';
+import { TempFile } from '../entities/temp-file.entity';
 import { TempDocumentRepository } from './temp-document.interface';
 import { AiStatus } from '../../global/constants/aiStatus.enum';
 
@@ -10,6 +11,8 @@ export class TypeOrmTempDocumentRepository implements TempDocumentRepository {
   constructor(
     @InjectRepository(TempDocument)
     private readonly repo: Repository<TempDocument>,
+    @InjectRepository(TempFile)
+    private readonly tempFileRepo: Repository<TempFile>,
   ) {}
 
   async insert(userId: string): Promise<TempDocument> {
@@ -34,5 +37,24 @@ export class TypeOrmTempDocumentRepository implements TempDocumentRepository {
     aiStatus: AiStatus,
   ): Promise<void> {
     await this.repo.update({ tempDocumentId }, { aiStatus });
+  }
+
+  async deleteExpired(days: number): Promise<number> {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const expired = await this.repo
+      .createQueryBuilder('td')
+      .select('td.tempDocumentId')
+      .where('td.createdAt < :cutoff', { cutoff })
+      .andWhere('td.aiStatus != :status', { status: AiStatus.FAILED })
+      .getMany();
+
+    if (expired.length === 0) return 0;
+
+    const ids = expired.map((d) => d.tempDocumentId);
+    await this.tempFileRepo.delete({ tempDocumentId: In(ids) });
+    await this.repo.delete(ids);
+
+    return ids.length;
   }
 }

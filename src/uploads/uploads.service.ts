@@ -1,5 +1,9 @@
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import Redis from 'ioredis';
 import { TypedConfigService } from '../configs/typedConfig.service';
 import { AiStatus } from '../global/constants/aiStatus.enum';
@@ -370,6 +374,13 @@ export class UploadsService {
     return { tempDocumentId, aiStatus: AiStatus.PENDING };
   }
 
+  async deleteS3File(fileUrl: string): Promise<void> {
+    const urlObj = new URL(fileUrl);
+    const fileKey = decodeURIComponent(urlObj.pathname.slice(1));
+    await this.s3.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: fileKey }),
+    );
+  }
   /**
    * 신규 업로드한 파일 용량만큼 users.storage_used_bytes 를 증분 갱신한다.
    * 기존 값이 정확하다는 전제하에 DB 레벨 원자적 증가(+=)로 처리해 동시 업로드 경합을 피한다.
