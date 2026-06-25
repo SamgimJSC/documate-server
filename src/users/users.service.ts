@@ -100,4 +100,12 @@ export class UsersService {
   async getUserSecurity(userId: string) {
     return this.userSecurityRepo.findByUserId(userId);
   }
+
+  async addStorageUsedBytes(userId: string, bytes: number) {
+    await this.userRepo.incrementStorageUsedBytes(userId, bytes);
+  }
+
+  async subtractStorageUsedBytes(userId: string, bytes: number) {
+    await this.userRepo.decrementStorageUsedBytes(userId, bytes);
+  }
 }

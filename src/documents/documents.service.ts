@@ -21,6 +21,7 @@ import { CreateAlertRequestDto } from './dto/createAlertRequest.dto';
 import { UpdateAlertRequestDto } from './dto/updateAlertRequest.dto';
 import { UpdateDocumentCategoryDto } from './dto/updateDocumentCategory.dto';
 import { Document } from './entities/document.entity';
+import { User } from '../users/entities/user.entity';
 import { DocumentCategory } from './entities/document-category.entity';
 import { DocumentFile } from './entities/document-file.entity';
 import { DocumentAlert } from './entities/document-alert.entity';
@@ -206,6 +207,18 @@ export class DocumentsService {
     await this.dataSource.transaction(async (em) => {
       await em.update(Document, { documentId }, { isDeleted: true });
       await em.delete(DocumentAlert, { documentId });
+
+      // 사용 용량에서 문서 파일 크기만큼 차감 (음수 방지)
+      const bytes = Number(document.fileSizeBytes ?? 0);
+      if (bytes > 0) {
+        await em
+          .createQueryBuilder()
+          .update(User)
+          .set({ storageUsedBytes: () => 'GREATEST(0, storage_used_bytes - :bytes)' })
+          .where('user_id = :userId', { userId })
+          .setParameter('bytes', bytes)
+          .execute();
+      }
     });
 
     return null;

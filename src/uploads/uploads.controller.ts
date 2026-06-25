@@ -62,7 +62,11 @@ export class UploadsController {
     @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
     @Body() dto: ReorderTempFilesDto,
   ) {
-    return this.uploadsService.reorderTempFiles(req.user.userId, tempDocumentId, dto);
+    return this.uploadsService.reorderTempFiles(
+      req.user.userId,
+      tempDocumentId,
+      dto,
+    );
   }
 
   @Post(':tempDocumentId/ai')

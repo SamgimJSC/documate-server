@@ -11,6 +11,7 @@ import { TypeOrmReceiptRepository } from './model/receipt.repository';
 import { TypeOrmReceiptTagRepository } from './model/receipt-tag.repository';
 import { TypeOrmMonthlyReportRepository } from './model/monthly-report.repository';
 import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { AuthModule } from '../auth/auth.module';
       ReceiptTag,
       MonthlyReport,
     ]),
-    AuthModule, 
+    AuthModule,
+    UsersModule,
   ],
   controllers: [ReceiptsController],
   exports: [

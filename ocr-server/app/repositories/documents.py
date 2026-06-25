@@ -11,6 +11,7 @@ def insert_document(
     title: str | None,
     file_type: str | None,
     page_count: int,
+    file_size_bytes: int,
     ocr_text: str,
     extracted_data: dict,
     ai_confidence: float | None,
@@ -31,13 +32,13 @@ def insert_document(
             cur.execute(
                 """
                 INSERT INTO documents (
-                    user_id, category_id, title, file_type, page_count,
+                    user_id, category_id, title, file_type, page_count, file_size_bytes,
                     ocr_text, extracted_data, ai_confidence,
                     issue_date, expiry_date, renewal_date,
                     ai_status, is_confirmed
                 )
                 VALUES (
-                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
                     %s, %s, %s,
                     %s, %s, %s,
                     'DONE', false
@@ -50,6 +51,7 @@ def insert_document(
                     title or "",
                     file_type,
                     page_count,
+                    file_size_bytes,
                     ocr_text,
                     Json(extracted_data),
                     ai_confidence,

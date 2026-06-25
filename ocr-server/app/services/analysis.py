@@ -38,8 +38,8 @@ def analyze(temp_document_id: str) -> None:
     if not files:
         raise AnalysisError(f"no files for temp document: {temp_document_id}")
 
-    # 1) OCR — 텍스트 + 평균 신뢰도
-    ocr_text, ocr_confidence = _run_ocr(files)
+    # 1) OCR — 텍스트 + 평균 신뢰도 + 분석한 S3 파일들의 총 용량(byte)
+    ocr_text, ocr_confidence, total_bytes = _run_ocr(files)
     if not ocr_text.strip():
         raise AnalysisError(f"OCR produced no text: {temp_document_id}")
 
@@ -66,9 +66,9 @@ def analyze(temp_document_id: str) -> None:
 
     # 4) DB 저장 (새 행 생성)
     if result["type"] == "RECEIPT":
-        _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence)
+        _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence, total_bytes)
     else:
-        _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confidence)
+        _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confidence, total_bytes)
 
     # 5) 임시 문서 상태를 DONE 으로 마감 (원본 데이터는 보존)
     repo.mark_done(temp_document_id)
@@ -80,18 +80,21 @@ def analyze(temp_document_id: str) -> None:
     )
 
 
-def _run_ocr(files: list[dict]) -> tuple[str, float]:
-    """모든 페이지를 OCR 해 합친 텍스트와 페이지 평균 신뢰도를 반환한다."""
+def _run_ocr(files: list[dict]) -> tuple[str, float, int]:
+    """모든 페이지를 OCR 해 합친 텍스트, 페이지 평균 신뢰도,
+    그리고 다운로드한 파일들의 총 용량(byte)을 반환한다."""
     pages: list[str] = []
     confidences: list[float] = []
+    total_bytes = 0
     for f in files:
         image_bytes = download_object(f["file_url"])
+        total_bytes += len(image_bytes)
         ocr = extract_text(image_bytes)
         pages.append(f"[p{f['page_no']}]\n{ocr.text}")
         confidences.append(ocr.confidence)
 
     avg_conf = round(sum(confidences) / len(confidences), 2) if confidences else 0.0
-    return "\n\n".join(pages), avg_conf
+    return "\n\n".join(pages), avg_conf, total_bytes
 
 
 def _classify_with_validation(ocr_text: str, temp_document_id: str) -> dict:
@@ -132,7 +135,7 @@ def _file_type_from_url(file_url: str) -> str | None:
     return None
 
 
-def _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confidence) -> None:
+def _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confidence, total_bytes) -> None:
     category_id = repo.resolve_document_category_id(result["category_code"])
     file_type = _file_type_from_url(files[0]["file_url"]) if files else None
 
@@ -142,6 +145,7 @@ def _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confide
         title=result["title"],
         file_type=file_type,
         page_count=len(files),
+        file_size_bytes=total_bytes,
         ocr_text=ocr_text,
         extracted_data=extracted_data,
         ai_confidence=ai_confidence,
@@ -153,7 +157,7 @@ def _save_document(temp_doc, files, ocr_text, result, extracted_data, ai_confide
     repo.add_activity(document_id, "AI_ANALYZED", "AI 문서 분석 완료")
 
 
-def _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence) -> None:
+def _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confidence, total_bytes) -> None:
     spend_category_id = repo.resolve_spend_category_id(result["spend_category_name"])
     file_url = files[0]["file_url"] if files else None
 
@@ -161,6 +165,7 @@ def _save_receipt(temp_doc, files, ocr_text, result, extracted_data, ai_confiden
         user_id=temp_doc["user_id"],
         spend_category_id=spend_category_id,
         file_url=file_url,
+        file_size_bytes=total_bytes,
         store_name=result["store_name"],
         store_address=result["store_address"],
         total_amount=result["total_amount"],

@@ -75,6 +75,36 @@ export class TypeOrmUserRepository implements UserRepository {
     return this.repo.save(user);
   }
 
+  async incrementStorageUsedBytes(
+    userId: string,
+    bytes: number,
+  ): Promise<void> {
+    // 읽고-쓰기 대신 DB 레벨 원자적 증가로 동시 업로드 경합을 방지한다.
+    await this.repo
+      .createQueryBuilder()
+      .update(User)
+      .set({ storageUsedBytes: () => 'storage_used_bytes + :bytes' })
+      .where('user_id = :userId', { userId })
+      .setParameter('bytes', bytes)
+      .execute();
+  }
+
+  async decrementStorageUsedBytes(
+    userId: string,
+    bytes: number,
+  ): Promise<void> {
+    // 음수로 내려가지 않도록 GREATEST(0, ...) 로 클램프한다.
+    await this.repo
+      .createQueryBuilder()
+      .update(User)
+      .set({
+        storageUsedBytes: () => 'GREATEST(0, storage_used_bytes - :bytes)',
+      })
+      .where('user_id = :userId', { userId })
+      .setParameter('bytes', bytes)
+      .execute();
+  }
+
   async softDeleteUser(
     userId: string,
     withdrawalReason?: string,
