@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
+import { NotificationScheduler } from './notification.scheduler';
 import { CreateNotificationBodyDto } from './dto/createNotificationBody.dto';
 import { RegisterDeviceTokenDto } from './dto/registerDeviceToken.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -31,7 +32,10 @@ import { type ReqUser } from '../global/types/express';
 @UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly notificationScheduler: NotificationScheduler,
+  ) {}
 
   // ====================================================================
   // GET /notifications
@@ -89,6 +93,17 @@ export class NotificationsController {
     @Param('tokenId', ParseUUIDPipe) tokenId: string,
   ) {
     return this.notificationsService.removeDeviceToken(user.userId, tokenId);
+  }
+
+  // ====================================================================
+  // POST /notifications/trigger-scheduler
+  // 스케줄러 수동 실행 (개발 테스트용)
+  // notify_date <= 오늘 && is_sent=false 인 document_alerts 처리
+  // ====================================================================
+  @Post('trigger-scheduler')
+  async triggerScheduler() {
+    await this.notificationScheduler.dispatchDueAlerts();
+    return { triggered: true };
   }
 
   // ====================================================================
