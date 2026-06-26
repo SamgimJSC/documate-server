@@ -53,6 +53,12 @@ export class AuthController {
     return null;
   }
 
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('X-Access-Token', { httpOnly: true, sameSite: 'lax' });
+  }
+
   @Post('password/reset')
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetPassword(@Body() body: ResetPasswordDto) {

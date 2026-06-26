@@ -12,6 +12,7 @@ import { type DeviceTokenRepository } from './model/device-token.interface';
 import { NotificationCategory } from '../global/constants/notificationCategory.enum';
 import { Platform } from '../global/constants/platform.enum';
 import { FcmService } from './providers/fcm.service';
+import { NodeMailer } from '../auth/providors/nodeMailer';
 
 /*
   알림 스케줄러
@@ -36,6 +37,7 @@ export class NotificationScheduler {
     @Inject(TypeOrmDeviceTokenRepository)
     private readonly deviceTokenRepo: DeviceTokenRepository,
     private readonly fcmService: FcmService,
+    private readonly nodeMailer: NodeMailer,
   ) {}
 
   /*
@@ -55,7 +57,7 @@ export class NotificationScheduler {
     // 발송 대상: notify_date <= today AND is_sent = false
     const dueAlerts = await this.documentAlertRepo.find({
       where: { isSent: false, notifyDate: LessThanOrEqual(today) },
-      relations: { document: true },
+      relations: { document: true, user: true },
     });
     const validAlerts = dueAlerts.filter(a => !a.document?.isDeleted);
 
@@ -125,8 +127,13 @@ export class NotificationScheduler {
       { isSent: true, sentAt: new Date() },
     );
 
-    // TODO: 이메일 채널은 시원님의 NodeMailer 발송 안정화 이후 연결
-    // if (alert.channelEmail) await this.mailer.send(...);
+    if (alert.channelEmail && alert.user?.email) {
+      await this.nodeMailer.sendAlertEmail({
+        to: alert.user.email,
+        subject: title,
+        html: this.nodeMailer.buildAlertEmailHtml(title, alert.reason, alert.notifyDate, alert.documentId),
+      });
+    }
   }
   /*
   사용자의 활성 디바이스 토큰을 가져와 FCM으로 멀티캐스트
