@@ -55,8 +55,14 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  logout(@Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Res({ passthrough: true }) res: Response,
+    @Body('deviceToken') deviceToken?: string,
+  ) {
     res.clearCookie('X-Access-Token', { httpOnly: true, sameSite: 'lax' });
+    if (deviceToken) {
+      await this.authService.deactivateDeviceTokenByFcmString(deviceToken).catch(() => {});
+    }
   }
 
   @Post('password/reset')

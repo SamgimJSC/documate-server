@@ -12,10 +12,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailVerification } from './entities/email-verification.entity';
 import { AuthToken } from './entities/auth-token.entity';
 import { NodeMailer } from './providors/nodeMailer';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EmailVerification, AuthToken]),
+    TypeOrmModule.forFeature([EmailVerification, AuthToken, DeviceToken]),
     JwtModule.registerAsync({
       inject: [TypedConfigService],
       useFactory: (config: TypedConfigService) => ({
