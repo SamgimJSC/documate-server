@@ -103,13 +103,17 @@ export class NotificationsService {
 
   /*
     디바이스 토큰 등록
-    - 앱/웹에서 Firebase로 받은 토큰을 우리 DB에 저장
-    - 이미 등록된 토큰이면 그대로 반환 (중복 저장 안 함)
+    - 이미 이 유저의 활성 토큰이면 그대로 반환 (중복 저장 안 함)
+    - 다른 유저 것이거나 비활성 상태 → 비활성화 후 현재 유저 것으로 새로 생성
+      (기기 공유/이전 시 이전 유저에게 알림이 가는 것을 방지)
   */
   async registerDeviceToken(userId: string, dto: RegisterDeviceTokenDto) {
     const existing = await this.deviceTokenRepo.findByToken(dto.token);
 
-    if (existing) return existing;
+    if (existing) {
+      if (existing.userId === userId && existing.isActive) return existing;
+      await this.deviceTokenRepo.deactivateToken(existing.tokenId);
+    }
 
     return this.deviceTokenRepo.createToken({ userId, ...dto });
   }

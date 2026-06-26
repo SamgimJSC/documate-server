@@ -1,4 +1,5 @@
-import { IsDefined, IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Platform } from '../../global/constants/platform.enum';
 
 export class LoginDto {
   @IsString()
@@ -11,4 +12,13 @@ export class LoginDto {
   @IsDefined()
   @IsNotEmpty()
   password: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  deviceToken?: string;
+
+  @IsOptional()
+  @IsEnum(Platform)
+  platform?: Platform;
 }

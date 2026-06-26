@@ -121,12 +121,8 @@ export class NotificationScheduler {
       );
     }
 
-    // 3) document_alerts 발송 완료 처리
-    await this.documentAlertRepo.update(
-      { alertId: alert.alertId },
-      { isSent: true, sentAt: new Date() },
-    );
-
+    // 3) 이메일 발송
+    // isSent=true 처리 전에 발송 — 이메일 실패 시 다음 스케줄러 실행에서 재시도 가능
     if (alert.channelEmail && alert.user?.email) {
       await this.nodeMailer.sendAlertEmail({
         to: alert.user.email,
@@ -134,6 +130,12 @@ export class NotificationScheduler {
         html: this.nodeMailer.buildAlertEmailHtml(title, alert.reason, alert.notifyDate, alert.documentId),
       });
     }
+
+    // 4) 모든 채널 처리 완료 후 발송 완료 표시
+    await this.documentAlertRepo.update(
+      { alertId: alert.alertId },
+      { isSent: true, sentAt: new Date() },
+    );
   }
   /*
   사용자의 활성 디바이스 토큰을 가져와 FCM으로 멀티캐스트

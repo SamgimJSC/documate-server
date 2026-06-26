@@ -1,4 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { SignUpDto } from './dto/signUp.dto';
 import { type EmailVerificationRepository } from './model/email-verification.interface';
@@ -21,6 +23,8 @@ import { type AuthTokenRepository } from './model/auth-token.interface';
 import { TypeOrmAuthTokenRepository } from './model/auth-token.repository';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { VerificationPurpose } from '../global/constants/verificationPurpose.enum';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { Platform } from '../global/constants/platform.enum';
 
 @Injectable()
 export class AuthService {
@@ -33,6 +37,8 @@ export class AuthService {
     private readonly nodeMailer: NodeMailer,
     private readonly jwtService: JwtService,
     private readonly configService: TypedConfigService,
+    @InjectRepository(DeviceToken)
+    private readonly deviceTokenRepo: Repository<DeviceToken>,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -207,7 +213,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+    const { email, password, deviceToken, platform } = loginDto;
 
     const [dbUser] = await this.usersService.getUsers({ email });
 
@@ -236,11 +242,52 @@ export class AuthService {
       refreshToken,
     });
 
+    // 디바이스 토큰이 함께 전달되면 등록/재할당
+    if (deviceToken && platform) {
+      await this.upsertDeviceToken(dbUser.userId, deviceToken, platform);
+    }
+
     return { accessToken };
   }
 
   async logout(userId: string): Promise<void> {
     await this.authTokenRepository.deleteByUserId(userId);
+  }
+
+  /*
+    FCM 토큰 문자열로 비활성화 — silent fail
+    클라이언트가 내부 tokenId를 모르더라도 FCM 토큰만으로 비활성화 가능
+  */
+  async deactivateDeviceTokenByFcmString(token: string): Promise<void> {
+    await this.deviceTokenRepo.update({ token }, { isActive: false });
+  }
+
+  /*
+    로그인 시 디바이스 토큰 등록/재할당
+    - 동일 FCM 토큰이 다른 유저에게 있으면 현재 유저로 재할당 (기기 공유 시 이전 유저에게 알림 가지 않도록)
+    - 동일 FCM 토큰이 이미 이 유저 것이면 isActive=true로 재활성화
+    - 없으면 새로 생성
+  */
+  private async upsertDeviceToken(
+    userId: string,
+    token: string,
+    platform: Platform,
+  ): Promise<void> {
+    const existing = await this.deviceTokenRepo.findOne({ where: { token } });
+    if (existing) {
+      await this.deviceTokenRepo.update(
+        { tokenId: existing.tokenId },
+        { userId, isActive: true },
+      );
+    } else {
+      const newToken = this.deviceTokenRepo.create({
+        userId,
+        token,
+        platform,
+        isActive: true,
+      });
+      await this.deviceTokenRepo.save(newToken);
+    }
   }
 
   createVerificationCode() {
