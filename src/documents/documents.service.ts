@@ -228,6 +228,7 @@ export class DocumentsService {
     await this.dataSource.transaction(async (em) => {
       await em.update(Document, { documentId }, { isDeleted: true });
       await em.delete(DocumentAlert, { documentId });
+      await em.delete(DocumentFile, { documentId });
 
       // 사용 용량에서 문서 파일 크기만큼 차감 (음수 방지)
       const bytes = Number(document.fileSizeBytes ?? 0);
