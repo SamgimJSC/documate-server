@@ -25,6 +25,7 @@ import { User } from '../users/entities/user.entity';
 import { DocumentCategory } from './entities/document-category.entity';
 import { DocumentFile } from './entities/document-file.entity';
 import { DocumentAlert } from './entities/document-alert.entity';
+import { DocumentActivity } from './entities/document-activity.entity';
 import { Tag } from './entities/tag.entity';
 import { DocumentTag } from './entities/document-tag.entity';
 import { AiStatus } from '../global/constants/aiStatus.enum';
@@ -217,18 +218,13 @@ export class DocumentsService {
     }
 
     const files = await this.documentFileRepository.findByDocumentId(documentId);
-    for (const file of files) {
-      try {
-        await this.uploadsService.deleteS3File(file.fileUrl);
-      } catch (e) {
-        // S3 삭제 실패해도 DB 삭제는 진행
-      }
-    }
 
     await this.dataSource.transaction(async (em) => {
-      await em.update(Document, { documentId }, { isDeleted: true });
-      await em.delete(DocumentAlert, { documentId });
       await em.delete(DocumentFile, { documentId });
+      await em.delete(DocumentAlert, { documentId });
+      await em.delete(DocumentActivity, { documentId });
+      await em.delete(DocumentTag, { documentId });
+      await em.delete(Document, { documentId });
 
       // 사용 용량에서 문서 파일 크기만큼 차감 (음수 방지)
       const bytes = Number(document.fileSizeBytes ?? 0);
@@ -242,6 +238,14 @@ export class DocumentsService {
           .execute();
       }
     });
+
+    for (const file of files) {
+      try {
+        await this.uploadsService.deleteS3File(file.fileUrl);
+      } catch (e) {
+        // S3 삭제 실패해도 DB는 이미 정상 삭제됨
+      }
+    }
 
     return null;
   }

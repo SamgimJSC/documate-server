@@ -26,10 +26,6 @@ export interface DocumentRepository {
     userId: string,
     dto: UpdateDocumentDto,
   ): Promise<Document | null>;
-  softDeleteDocumentByUserId(
-    documentId: string,
-    userId: string,
-  ): Promise<boolean>;
   setFavoriteByUserId(
     documentId: string,
     userId: string,

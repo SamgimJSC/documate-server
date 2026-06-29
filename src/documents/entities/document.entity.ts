@@ -85,9 +85,6 @@ export class Document {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
-  @Column({ name: 'is_deleted', type: 'boolean', default: false })
-  isDeleted: boolean;
-
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
   user: User;

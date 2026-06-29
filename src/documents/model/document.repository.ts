@@ -39,7 +39,7 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
     loadRelations = false,
   ): Promise<Document | null> {
     return this.repo.findOne({
-      where: { documentId, userId, isDeleted: false },
+      where: { documentId, userId },
       relations: loadRelations
         ? { category: true, documentTags: { tag: true }, documentFiles: true }
         : undefined,
@@ -73,7 +73,6 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
       .leftJoinAndSelect('d.documentTags', 'dt')
       .leftJoinAndSelect('dt.tag', 'tag')
       .where('d.userId = :userId', { userId })
-      .andWhere('d.isDeleted = false');
 
     if (keyword) {
       if (searchField === 'title') {
@@ -151,18 +150,6 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
     return this.findByDocumentIdAndUserId(documentId, userId, true);
   }
 
-  async softDeleteDocumentByUserId(
-    documentId: string,
-    userId: string,
-  ): Promise<boolean> {
-    const document = await this.findByDocumentIdAndUserId(documentId, userId);
-    if (!document) return false;
-
-    document.isDeleted = true;
-    await this.repo.save(document);
-    return true;
-  }
-
   async setFavoriteByUserId(
     documentId: string,
     userId: string,
@@ -181,7 +168,7 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
   ): Promise<{ documentId: string; aiStatus: AiStatus } | null> {
     const result = await this.repo.findOne({
       select: { documentId: true, aiStatus: true },
-      where: { documentId, userId, isDeleted: false },
+      where: { documentId, userId },
     });
     if (!result) return null;
     return { documentId: result.documentId, aiStatus: result.aiStatus };
