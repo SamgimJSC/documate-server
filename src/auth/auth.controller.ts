@@ -4,7 +4,6 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -13,11 +12,8 @@ import { SignUpDto } from './dto/signUp.dto';
 import { SendEmailVerificationDto } from './dto/sendEmailVerification.dto';
 import { VerifyEmailVerificationDto } from './dto/verifyEmailVerification.dto';
 import { LoginDto } from './dto/login.dto';
-import { type Response, type Request } from 'express';
+import { type Response } from 'express';
 import { JwtAuthGuard } from './auth.guard';
-import { ReqUser } from '../global/types/express';
-import { DecoUser } from '../global/decorators/decoUser.decorator';
-import { User } from '../users/entities/user.entity';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { PinLoginDto } from './dto/pinLogin.dto';
 
@@ -50,6 +46,7 @@ export class AuthController {
       httpOnly: true,
       secure: false, // production 에서는 true로 하기
       sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     return null;
   }
@@ -85,4 +82,5 @@ export class AuthController {
   async resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(body);
   }
+
 }
