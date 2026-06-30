@@ -17,6 +17,15 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   // ====================================================================
+  // GET /reports/this-month-summary
+  // 대시보드용 이번달 총 지출 + 영수증 건수 (쿼리 파라미터 없음, 항상 현재 월)
+  // ====================================================================
+  @Get('this-month-summary')
+  getThisMonthSummary(@DecoUser() user: ReqUser) {
+    return this.reportsService.getThisMonthSummary(user.userId);
+  }
+
+  // ====================================================================
   // GET /reports/monthly-spend?year=2026
   // 월별 지출 합계 (12개월 0-fill)
   // ====================================================================

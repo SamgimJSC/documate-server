@@ -11,6 +11,7 @@ import { FcmService } from './providers/fcm.service';
 import { TypedConfigService } from '../configs/typedConfig.service';
 import { NotificationScheduler } from './notification.scheduler';
 import { DocumentAlert } from '../documents/entities/document-alert.entity';
+import { UserSettings } from '../users/entities/user-settings.entity';
 
 /*
   알림 모듈
@@ -25,7 +26,7 @@ import { DocumentAlert } from '../documents/entities/document-alert.entity';
 */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, DeviceToken, DocumentAlert]),
+    TypeOrmModule.forFeature([Notification, DeviceToken, DocumentAlert, UserSettings]),
     AuthModule,
   ],
   controllers: [NotificationsController],

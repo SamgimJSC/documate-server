@@ -17,11 +17,13 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
+import { UpdateUserSettingsDto } from './dto/updateUserSettings.dto';
 import { UpdatePinDto } from './dto/updatePin.dto';
 import { VerifyPinDto } from './dto/verifyPin.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { User } from './entities/user.entity';
+import type { ReqUser } from '../global/types/express';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -39,6 +41,27 @@ export class UsersController {
   @Get('me')
   getMe(@DecoUser() user: User) {
     return this.usersService.getOneUser(user.userId);
+  }
+
+  // ====================================================================
+  // GET /users/me/settings
+  // 내 알림/앱 설정 조회
+  // ====================================================================
+  @Get('me/settings')
+  getMySettings(@DecoUser() user: ReqUser) {
+    return this.usersService.getUserSettings(user.userId);
+  }
+
+  // ====================================================================
+  // PATCH /users/me/settings
+  // 내 알림/앱 설정 변경 (pushEnabled, emailNotiEnabled 등)
+  // ====================================================================
+  @Patch('me/settings')
+  updateMySettings(
+    @DecoUser() user: ReqUser,
+    @Body() dto: UpdateUserSettingsDto,
+  ) {
+    return this.usersService.updateUserSettings(user.userId, dto);
   }
 
   @Get(':id')

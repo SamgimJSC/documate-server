@@ -1,10 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Repository } from 'typeorm';
+import { In, LessThanOrEqual, Repository } from 'typeorm';
 
 import { DocumentAlert } from '../documents/entities/document-alert.entity';
 import { Document } from '../documents/entities/document.entity';
+import { UserSettings } from '../users/entities/user-settings.entity';
 import { TypeOrmNotificationRepository } from './model/notification.repository';
 import { type NotificationRepository } from './model/notification.interface';
 import { TypeOrmDeviceTokenRepository } from './model/device-token.repository';
@@ -32,6 +33,8 @@ export class NotificationScheduler {
     // 스케줄러에서 raw Repository로 읽기만 하므로 직접 주입
     @InjectRepository(DocumentAlert)
     private readonly documentAlertRepo: Repository<DocumentAlert>,
+    @InjectRepository(UserSettings)
+    private readonly userSettingsRepo: Repository<UserSettings>,
     @Inject(TypeOrmNotificationRepository)
     private readonly notificationRepo: NotificationRepository,
     @Inject(TypeOrmDeviceTokenRepository)
@@ -68,12 +71,20 @@ export class NotificationScheduler {
 
     this.logger.log(`발송 대상 알림 ${validAlerts.length}건 처리 시작`);
 
+    // 관련 유저의 설정을 한 번에 로드 (N+1 방지)
+    const userIds = [...new Set(validAlerts.map((a) => a.userId))];
+    const settingsList = await this.userSettingsRepo.find({
+      where: { userId: In(userIds) },
+    });
+    const settingsMap = new Map(settingsList.map((s) => [s.userId, s]));
+
     let success = 0;
     let failed = 0;
 
     for (const alert of validAlerts) {
       try {
-        await this.processAlert(alert);
+        const userSettings = settingsMap.get(alert.userId) ?? null;
+        await this.processAlert(alert, userSettings);
         success++;
       } catch (err) {
         failed++;
@@ -93,7 +104,10 @@ export class NotificationScheduler {
   2) FCM으로 푸시 발송 (앱/웹 채널 둘 중 하나라도 켜져있으면)
   3) document_alerts 발송 완료 처리
   */
-  private async processAlert(alert: DocumentAlert): Promise<void> {
+  private async processAlert(
+    alert: DocumentAlert,
+    userSettings: UserSettings | null,
+  ): Promise<void> {
     const title = this.buildTitle(alert);
     const body = alert.reason ?? '';
 
@@ -107,10 +121,9 @@ export class NotificationScheduler {
     });
 
     // 2) FCM 푸시 발송
-    // - 앱 푸시 또는 웹 푸시 채널 중 하나라도 켜져있으면 발송
-    // - FCM이 IOS/ANDROID/WEB 토큰을 알아서 구분해서 보냄
-    // - 사용자가 어떤 채널 토글했는지에 따라 해당 플랫폼 토큰만 추리는 건 아래 메서드에서 처리
-    if (alert.channelAppPush || alert.channelWebPush) {
+    // - 알림별 채널 설정(channelAppPush/channelWebPush) AND 유저 전역 설정(pushEnabled) 모두 켜져야 발송
+    const pushEnabled = userSettings?.pushEnabled ?? true;
+    if (pushEnabled && (alert.channelAppPush || alert.channelWebPush)) {
       await this.sendFcmPush(
         alert.userId,
         title,
@@ -122,8 +135,9 @@ export class NotificationScheduler {
     }
 
     // 3) 이메일 발송
-    // isSent=true 처리 전에 발송 — 이메일 실패 시 다음 스케줄러 실행에서 재시도 가능
-    if (alert.channelEmail && alert.user?.email) {
+    // - 알림별 채널 설정(channelEmail) AND 유저 전역 설정(emailNotiEnabled) 모두 켜져야 발송
+    const emailEnabled = userSettings?.emailNotiEnabled ?? true;
+    if (emailEnabled && alert.channelEmail && alert.user?.email) {
       await this.nodeMailer.sendAlertEmail({
         to: alert.user.email,
         subject: title,

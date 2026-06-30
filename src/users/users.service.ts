@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
+import type { UpdateUserSettingsDto } from './dto/updateUserSettings.dto';
 import { UpdatePinDto } from './dto/updatePin.dto';
 import { TypeOrmUserRepository } from './model/users.repository';
 import { type UserRepository } from './model/users.interface';
@@ -102,6 +103,30 @@ export class UsersService {
 
   async getUserSecurity(userId: string) {
     return this.userSecurityRepo.findByUserId(userId);
+  }
+
+  async getUserSettings(userId: string) {
+    const settings = await this.userSettingsRepo.findByUserId(userId);
+
+    if (!settings)
+      throw new ENotFoundException({
+        message: '사용자 설정을 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
+    return settings;
+  }
+
+  async updateUserSettings(userId: string, dto: UpdateUserSettingsDto) {
+    const updated = await this.userSettingsRepo.updateSettings(userId, dto);
+
+    if (!updated)
+      throw new ENotFoundException({
+        message: '사용자 설정을 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
+    return updated;
   }
 
   async verifyPin(userId: string, pinNumber: string): Promise<void> {
