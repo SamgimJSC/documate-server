@@ -41,6 +41,16 @@ export interface CategorySummary {
   receiptCount: number;
 }
 
+/*
+  대시보드 이번달 요약
+*/
+export interface ThisMonthSummary {
+  year: number;
+  month: number;
+  totalSpend: number;
+  receiptCount: number;
+}
+
 export interface ReportsRepository {
   // 월별 합계 (특정 연도)
   getMonthlyTotals(userId: string, year: number): Promise<MonthlyTotal[]>;
@@ -63,4 +73,11 @@ export interface ReportsRepository {
     month?: number;
     date?: string;
   }): Promise<CategorySummary[]>;
+
+  // 대시보드용 이번달 총 지출 + 영수증 건수
+  getThisMonthSummary(
+    userId: string,
+    year: number,
+    month: number,
+  ): Promise<ThisMonthSummary>;
 }

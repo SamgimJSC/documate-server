@@ -78,6 +78,17 @@ export class ReportsService {
   }
 
   /*
+    대시보드용 이번달 요약
+    - 쿼리 파라미터 없이 항상 현재 연/월 기준으로 반환
+  */
+  async getThisMonthSummary(userId: string) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    return this.reportsRepo.getThisMonthSummary(userId, year, month);
+  }
+
+  /*
     카테고리별 지출 요약
     - 세 가지 모드: year만 / year+month / date
     - 각 카테고리가 전체 지출의 몇 %인지(percentage) 함께 계산

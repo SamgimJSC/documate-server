@@ -8,6 +8,7 @@ import {
   DailyTotal,
   MonthlyTotal,
   ReportsRepository,
+  ThisMonthSummary,
 } from './reports.interface';
 
 /*
@@ -144,6 +145,33 @@ export class TypeOrmReportsRepository implements ReportsRepository {
       totalSpend: Number(row.total),
       receiptCount: Number(row.count),
     }));
+  }
+
+  /*
+    대시보드용 이번달 총 지출 + 영수증 건수
+    단순 SUM/COUNT 하나만 반환 — 일별 브레이크다운 불필요
+  */
+  async getThisMonthSummary(
+    userId: string,
+    year: number,
+    month: number,
+  ): Promise<ThisMonthSummary> {
+    const row = await this.receiptRepo
+      .createQueryBuilder('r')
+      .select('COALESCE(SUM(r.total_amount), 0)', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .where('r.userId = :userId', { userId })
+      .andWhere('r.isDeleted = false')
+      .andWhere('EXTRACT(YEAR FROM r.purchase_date) = :year', { year })
+      .andWhere('EXTRACT(MONTH FROM r.purchase_date) = :month', { month })
+      .getRawOne<{ total: string; count: string }>();
+
+    return {
+      year,
+      month,
+      totalSpend: Number(row?.total ?? 0),
+      receiptCount: Number(row?.count ?? 0),
+    };
   }
 
   /*
