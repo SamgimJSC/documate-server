@@ -18,6 +18,8 @@ import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { UpdateUserSettingsDto } from './dto/updateUserSettings.dto';
+import { UpdatePinDto } from './dto/updatePin.dto';
+import { VerifyPinDto } from './dto/verifyPin.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { User } from './entities/user.entity';
@@ -70,6 +72,18 @@ export class UsersController {
   @Post()
   createUser(@Body() createUserDto: CreateUserDto) {
     return this.usersService.createUser(createUserDto);
+  }
+
+  @Post('me/pin/verify')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  verifyPin(@DecoUser() user: User, @Body() body: VerifyPinDto) {
+    return this.usersService.verifyPin(user.userId, body.pinNumber);
+  }
+
+  @Patch('me/pin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updatePin(@DecoUser() user: User, @Body() updatePinDto: UpdatePinDto) {
+    return this.usersService.updatePin(user.userId, updatePinDto);
   }
 
   @Patch(':id')

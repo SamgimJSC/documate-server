@@ -15,6 +15,7 @@ import { LoginDto } from './dto/login.dto';
 import { type Response } from 'express';
 import { JwtAuthGuard } from './auth.guard';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
+import { PinLoginDto } from './dto/pinLogin.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -60,6 +61,20 @@ export class AuthController {
     if (deviceToken) {
       await this.authService.deactivateDeviceTokenByFcmString(deviceToken).catch(() => {});
     }
+  }
+
+  @Post('login/pin')
+  async loginWithPin(
+    @Body() body: PinLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken } = await this.authService.loginWithPin(body);
+    res.cookie('X-Access-Token', accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+    });
+    return null;
   }
 
   @Post('password/reset')
