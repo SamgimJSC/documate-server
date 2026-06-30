@@ -2,9 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/createUser.dto';
 import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
+import { UpdatePinDto } from './dto/updatePin.dto';
 import { TypeOrmUserRepository } from './model/users.repository';
 import { type UserRepository } from './model/users.interface';
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
+import { EUnauthorizedException } from '../global/exceptions/EUnauthorizedException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { EConflictException } from '../global/exceptions/EConflictException';
 import { TypeOrmUserSecurityRepository } from './model/user-security.repository';
@@ -12,6 +14,7 @@ import { type UserSecurityRepository } from './model/user-security.interface';
 import { TypeOrmUserSettingsRepository } from './model/user-settings.repository';
 import { type UserSettingsRepository } from './model/user-settings.interface';
 import { Transactional } from 'typeorm-transactional';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -99,6 +102,58 @@ export class UsersService {
 
   async getUserSecurity(userId: string) {
     return this.userSecurityRepo.findByUserId(userId);
+  }
+
+  async verifyPin(userId: string, pinNumber: string): Promise<void> {
+    const security = await this.userSecurityRepo.findByUserId(userId);
+
+    if (!security || !security.pinHash)
+      throw new EUnauthorizedException({
+        message: 'PIN이 설정되어 있지 않습니다.',
+        errorCode: ERROR_CODE.PIN_NOT_SET,
+      });
+
+    const isValid = await bcrypt.compare(pinNumber, security.pinHash);
+
+    if (!isValid)
+      throw new EUnauthorizedException({
+        message: '현재 PIN이 일치하지 않습니다.',
+        errorCode: ERROR_CODE.INVALID_PIN,
+      });
+  }
+
+  async updatePin(userId: string, updatePinDto: UpdatePinDto) {
+    const security = await this.userSecurityRepo.findByUserId(userId);
+
+    if (!security || !security.pinHash)
+      throw new EUnauthorizedException({
+        message: 'PIN이 설정되어 있지 않습니다.',
+        errorCode: ERROR_CODE.PIN_NOT_SET,
+      });
+
+    const isValid = await bcrypt.compare(updatePinDto.currentPin, security.pinHash);
+
+    if (!isValid)
+      throw new EUnauthorizedException({
+        message: '현재 PIN이 일치하지 않습니다.',
+        errorCode: ERROR_CODE.INVALID_PIN,
+      });
+
+    const newPinHash = await bcrypt.hash(updatePinDto.newPin, 10);
+
+    await this.userSecurityRepo.updateSecurity(userId, {
+      pinHash: newPinHash,
+      pinUpdatedAt: new Date(),
+      pinFailedCount: 0,
+    });
+  }
+
+  async incrementPinFailedCount(userId: string) {
+    return this.userSecurityRepo.incrementPinFailedCount(userId);
+  }
+
+  async resetPinFailedCount(userId: string) {
+    return this.userSecurityRepo.resetPinFailedCount(userId);
   }
 
   async addStorageUsedBytes(userId: string, bytes: number) {

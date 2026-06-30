@@ -30,6 +30,9 @@ Base URL: `/auth`
 | `INVALID_TOKEN` | 유효하지 않은 토큰 |
 | `EMAIL_SEND_FAILURE` | 이메일 발송 실패 |
 | `INVALID_EMAIL_VERIFICATION` | 유효하지 않은 이메일 인증 |
+| `INVALID_PIN` | PIN 불일치 |
+| `PIN_LOCKED` | PIN 5회 실패로 잠김 |
+| `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
 
 ---
 
@@ -221,6 +224,49 @@ POST /auth/login
 |---|---|---|
 | 404 | `USER_NOT_FOUND` | 존재하지 않는 이메일 |
 | 401 | `INVALID_PASSWORD` | 비밀번호 불일치 |
+
+---
+
+### 5. PIN 로그인
+
+이메일과 PIN으로 로그인합니다. 성공 시 `X-Access-Token` 쿠키가 설정됩니다.
+
+PIN은 반드시 이메일과 함께 전송해야 합니다. PIN만으로는 로그인할 수 없으며, 동일한 PIN을 가진 다른 사용자와 혼동되지 않도록 이메일로 계정을 특정합니다.
+
+```
+POST /auth/login/pin
+```
+
+**Request Body**
+
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `email` | string | Y | 이메일 주소 |
+| `pinNumber` | string | Y | 6자리 숫자 PIN |
+| `deviceToken` | string | N | FCM 디바이스 토큰 |
+| `platform` | string | N | 플랫폼 (`IOS` \| `ANDROID` \| `WEB`) |
+
+**Request 예시**
+
+```json
+{
+  "email": "user@example.com",
+  "pinNumber": "123456"
+}
+```
+
+**Response**
+
+응답 본문은 없으며(`data: null`), HTTP-only 쿠키로 Access Token이 발급됩니다.
+
+**에러 응답**
+
+| HTTP Status | errorCode | 설명 |
+|---|---|---|
+| 404 | `USER_NOT_FOUND` | 존재하지 않는 이메일 |
+| 401 | `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
+| 401 | `PIN_LOCKED` | PIN 5회 실패로 잠김 (이메일 로그인 필요) |
+| 401 | `INVALID_PIN` | PIN 불일치 |
 
 ---
 
