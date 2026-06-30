@@ -10,7 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { InputMethod } from '../../global/constants/inputMethod.enum';
 
 export class CreateReceiptRequestDto {
@@ -65,10 +65,25 @@ export class CreateReceiptRequestDto {
   ocrText?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    }
+    return value;
+  })
   @IsObject()
   extractedData?: Record<string, any> | null;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   isConfirmed?: boolean;
 }
