@@ -19,6 +19,7 @@ import { ReqUser } from '../global/types/express';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { User } from '../users/entities/user.entity';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
+import { PinLoginDto } from './dto/pinLogin.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -63,6 +64,20 @@ export class AuthController {
     if (deviceToken) {
       await this.authService.deactivateDeviceTokenByFcmString(deviceToken).catch(() => {});
     }
+  }
+
+  @Post('login/pin')
+  async loginWithPin(
+    @Body() body: PinLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken } = await this.authService.loginWithPin(body);
+    res.cookie('X-Access-Token', accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+    });
+    return null;
   }
 
   @Post('password/reset')
