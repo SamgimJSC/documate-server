@@ -5,6 +5,7 @@ export interface TempFileRepository {
     tempDocumentId: string;
     fileUrl: string;
     pageNo: number;
+    fileSizeBytes: string;
   }): Promise<TempFile>;
 
   countByTempDocumentId(tempDocumentId: string): Promise<number>;
@@ -13,6 +14,8 @@ export interface TempFileRepository {
     pageNo: number,
   ): Promise<boolean>;
   findByTempDocumentId(tempDocumentId: string): Promise<TempFile[]>;
+  findByIdAndTempDocumentId(id: string, tempDocumentId: string): Promise<TempFile | null>;
+  deleteById(id: string): Promise<void>;
   reorderPages(
     tempDocumentId: string,
     orderedFileIds: string[],
