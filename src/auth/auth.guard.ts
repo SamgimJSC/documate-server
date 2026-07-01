@@ -30,6 +30,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       httpOnly: true,
       secure: false, // production 에서는 true로 하기
       sameSite: 'lax',
+      ...(user.stayLoggedIn && { maxAge: 30 * 24 * 60 * 60 * 1000 }),
     });
 
     request.user = { ...user, isExpired: false };

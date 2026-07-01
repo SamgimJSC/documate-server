@@ -1,17 +1,29 @@
-import { IsBoolean, IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDefined,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsNumberString,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+} from 'class-validator';
 import { Platform } from '../../global/constants/platform.enum';
 
-export class LoginDto {
+export class PinLoginDto {
   @IsString()
   @IsEmail()
   @IsNotEmpty()
   @IsDefined()
   email: string;
 
-  @IsString()
-  @IsDefined()
+  @IsNumberString()
   @IsNotEmpty()
-  password: string;
+  @IsDefined()
+  @Length(6, 6)
+  pinNumber: string;
 
   @IsOptional()
   @IsString()

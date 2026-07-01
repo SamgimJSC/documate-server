@@ -4,7 +4,6 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -13,12 +12,10 @@ import { SignUpDto } from './dto/signUp.dto';
 import { SendEmailVerificationDto } from './dto/sendEmailVerification.dto';
 import { VerifyEmailVerificationDto } from './dto/verifyEmailVerification.dto';
 import { LoginDto } from './dto/login.dto';
-import { type Response, type Request } from 'express';
+import { type Response } from 'express';
 import { JwtAuthGuard } from './auth.guard';
-import { ReqUser } from '../global/types/express';
-import { DecoUser } from '../global/decorators/decoUser.decorator';
-import { User } from '../users/entities/user.entity';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
+import { PinLoginDto } from './dto/pinLogin.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -44,11 +41,12 @@ export class AuthController {
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken } = await this.authService.login(body);
+    const { accessToken, stayLoggedIn } = await this.authService.login(body);
     res.cookie('X-Access-Token', accessToken, {
       httpOnly: true,
       secure: false, // production 에서는 true로 하기
       sameSite: 'lax',
+      ...(stayLoggedIn && { maxAge: 30 * 24 * 60 * 60 * 1000 }),
     });
     return null;
   }
@@ -65,9 +63,25 @@ export class AuthController {
     }
   }
 
+  @Post('login/pin')
+  async loginWithPin(
+    @Body() body: PinLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, stayLoggedIn } = await this.authService.loginWithPin(body);
+    res.cookie('X-Access-Token', accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      ...(stayLoggedIn && { maxAge: 30 * 24 * 60 * 60 * 1000 }),
+    });
+    return null;
+  }
+
   @Post('password/reset')
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(body);
   }
+
 }

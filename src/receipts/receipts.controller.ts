@@ -10,8 +10,12 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptRequestDto } from './dto/createReceiptRequest.dto';
@@ -20,6 +24,7 @@ import { UpdateReceiptRequestDto } from './dto/updateReceiptRequest.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { type ReqUser } from '../global/types/express';
+import { MAX_FILE_SIZE } from '../uploads/const/upload.const';
 
 /*
   영수증 API
@@ -36,11 +41,18 @@ export class ReceiptsController {
   // 영수증 생성 (언니 작업분)
   // ====================================================================
   @Post()
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+    }),
+  )
   createReceipt(
     @DecoUser() user: ReqUser,
     @Body() body: CreateReceiptRequestDto,
+    @UploadedFile() image?: Express.Multer.File,
   ) {
-    return this.receiptsService.createReceipt(user.userId, body);
+    return this.receiptsService.createReceipt(user.userId, body, image);
   }
 
   // ====================================================================

@@ -34,6 +34,8 @@ Base URL: `/users`
 | `EMAIL_ALREADY_USED` | 이미 사용 중인 이메일 |
 | `NICKNAME_ALREADY_USED` | 이미 사용 중인 닉네임 |
 | `INVALID_TOKEN` | 유효하지 않은 인증 토큰 |
+| `INVALID_PIN` | PIN 불일치 |
+| `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
 
 ---
 
@@ -261,7 +263,85 @@ PATCH /users/:id
 
 ---
 
-### 5. 사용자 삭제
+### 5. PIN 검증
+
+현재 설정된 PIN이 맞는지 확인합니다. PIN 재설정 전 기존 PIN을 검증할 때 사용합니다.
+
+```
+POST /users/me/pin/verify
+```
+
+**HTTP Status**: `204 No Content`
+
+**Request Body**
+
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `pinNumber` | string | Y | 검증할 6자리 숫자 PIN |
+
+**Request 예시**
+
+```json
+{
+  "pinNumber": "123456"
+}
+```
+
+**Response**
+
+성공 시 응답 본문 없이 `204 No Content`를 반환합니다.
+
+**에러 응답**
+
+| HTTP Status | errorCode | 설명 |
+|---|---|---|
+| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
+| 401 | `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
+| 401 | `INVALID_PIN` | PIN 불일치 |
+
+---
+
+### 6. PIN 재설정
+
+현재 PIN을 검증한 뒤 새 PIN으로 변경합니다.
+
+```
+PATCH /users/me/pin
+```
+
+**HTTP Status**: `204 No Content`
+
+**Request Body**
+
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `currentPin` | string | Y | 현재 6자리 숫자 PIN |
+| `newPin` | string | Y | 변경할 새 6자리 숫자 PIN |
+
+**Request 예시**
+
+```json
+{
+  "currentPin": "123456",
+  "newPin": "654321"
+}
+```
+
+**Response**
+
+성공 시 응답 본문 없이 `204 No Content`를 반환합니다.
+
+**에러 응답**
+
+| HTTP Status | errorCode | 설명 |
+|---|---|---|
+| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
+| 401 | `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
+| 401 | `INVALID_PIN` | 현재 PIN 불일치 |
+
+---
+
+### 7. 사용자 삭제
 
 사용자를 삭제합니다. (소프트 삭제)
 

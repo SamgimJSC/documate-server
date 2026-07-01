@@ -1,7 +1,23 @@
+import { IsBoolean, IsOptional } from 'class-validator';
+
 export class UpdateUserSettingsDto {
+  @IsOptional()
+  @IsBoolean()
   pushEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   emailNotiEnabled?: boolean;
-  cameraAutoOcr?: boolean | null;
-  darkMode?: boolean | null;
-  appLockEnabled?: boolean | null;
+
+  @IsOptional()
+  @IsBoolean()
+  cameraAutoOcr?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  darkMode?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  appLockEnabled?: boolean;
 }

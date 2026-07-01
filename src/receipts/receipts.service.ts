@@ -10,6 +10,8 @@ import { UpdateReceiptRequestDto } from './dto/updateReceiptRequest.dto';
 import { Receipt } from './entities/receipt.entity';
 import { AiStatus } from '../global/constants/aiStatus.enum';
 import { UsersService } from '../users/users.service';
+import { UploadsService } from '../uploads/uploads.service';
+import { UploadTarget } from '../global/constants/uploadTarget.enum';
 
 @Injectable()
 export class ReceiptsService {
@@ -17,6 +19,7 @@ export class ReceiptsService {
     @Inject(TypeOrmReceiptRepository)
     private readonly receiptRepo: ReceiptRepository,
     private readonly usersService: UsersService,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   /*
@@ -27,11 +30,26 @@ export class ReceiptsService {
   async createReceipt(
     userId: string,
     dto: CreateReceiptRequestDto,
+    image?: Express.Multer.File,
   ): Promise<Receipt> {
+    let fileUrl = dto.fileUrl;
+    let fileSizeBytes = dto.fileSizeBytes ?? 0;
+
+    if (image) {
+      const uploaded = await this.uploadsService.uploadFile(
+        userId,
+        image,
+        UploadTarget.RECEIPT,
+      );
+      fileUrl = uploaded.fileUrl;
+      fileSizeBytes = Number(uploaded.fileSizeBytes);
+    }
+
     return this.receiptRepo.createReceipt({
       ...dto,
       userId,
-      fileSizeBytes: String(dto.fileSizeBytes ?? 0),
+      fileUrl,
+      fileSizeBytes: String(fileSizeBytes),
       purchaseDate: new Date(dto.purchaseDate),
       aiStatus: AiStatus.DONE,
       isConfirmed: dto.isConfirmed ?? true,

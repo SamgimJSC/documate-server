@@ -25,6 +25,7 @@ import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { VerificationPurpose } from '../global/constants/verificationPurpose.enum';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { Platform } from '../global/constants/platform.enum';
+import { PinLoginDto } from './dto/pinLogin.dto';
 
 @Injectable()
 export class AuthService {
@@ -213,7 +214,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password, deviceToken, platform } = loginDto;
+    const { email, password, deviceToken, platform, stayLoggedIn = false } = loginDto;
 
     const [dbUser] = await this.usersService.getUsers({ email });
 
@@ -233,7 +234,7 @@ export class AuthService {
         errorCode: ERROR_CODE.INVALID_PASSWORD,
       });
 
-    const { accessToken, refreshToken } = this.signTokens(dbUser.userId);
+    const { accessToken, refreshToken } = this.signTokens(dbUser.userId, stayLoggedIn);
 
     await this.authTokenRepository.deleteByUserId(dbUser.userId);
     await this.authTokenRepository.createToken({
@@ -247,7 +248,62 @@ export class AuthService {
       await this.upsertDeviceToken(dbUser.userId, deviceToken, platform);
     }
 
-    return { accessToken };
+    return { accessToken, stayLoggedIn };
+  }
+
+  async loginWithPin(pinLoginDto: PinLoginDto) {
+    const { email, pinNumber, deviceToken, platform, stayLoggedIn = false } = pinLoginDto;
+
+    // email로 유저를 특정하기 때문에 같은 PIN을 가진 다른 유저로 로그인되는 버그 없음
+    const [dbUser] = await this.usersService.getUsers({ email });
+
+    if (!dbUser)
+      throw new ENotFoundException({
+        message: '존재하지 않는 계정입니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
+    const security = await this.usersService.getUserSecurity(dbUser.userId);
+
+    if (!security || !security.pinHash)
+      throw new EUnauthorizedException({
+        message: 'PIN이 설정되어 있지 않습니다.',
+        errorCode: ERROR_CODE.PIN_NOT_SET,
+      });
+
+    const PIN_MAX_FAILED = 5;
+    if (security.pinFailedCount >= PIN_MAX_FAILED)
+      throw new EUnauthorizedException({
+        message: 'PIN 입력 횟수를 초과했습니다. 이메일 로그인을 이용해주세요.',
+        errorCode: ERROR_CODE.PIN_LOCKED,
+      });
+
+    const isValid = await bcrypt.compare(pinNumber, security.pinHash);
+
+    if (!isValid) {
+      await this.usersService.incrementPinFailedCount(dbUser.userId);
+      throw new EUnauthorizedException({
+        message: 'PIN이 일치하지 않습니다.',
+        errorCode: ERROR_CODE.INVALID_PIN,
+      });
+    }
+
+    await this.usersService.resetPinFailedCount(dbUser.userId);
+
+    const { accessToken, refreshToken } = this.signTokens(dbUser.userId, stayLoggedIn);
+
+    await this.authTokenRepository.deleteByUserId(dbUser.userId);
+    await this.authTokenRepository.createToken({
+      userId: dbUser.userId,
+      accessToken,
+      refreshToken,
+    });
+
+    if (deviceToken && platform) {
+      await this.upsertDeviceToken(dbUser.userId, deviceToken, platform);
+    }
+
+    return { accessToken, stayLoggedIn };
   }
 
   async logout(userId: string): Promise<void> {
@@ -302,8 +358,8 @@ export class AuthService {
     return expiresAt.getTime() <= Date.now();
   }
 
-  signTokens(userId: string) {
-    const payload: JwtPayload = { sub: userId };
+  signTokens(userId: string, stayLoggedIn: boolean = false) {
+    const payload: JwtPayload = { sub: userId, stayLoggedIn };
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
