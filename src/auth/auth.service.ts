@@ -214,7 +214,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password, deviceToken, platform } = loginDto;
+    const { email, password, deviceToken, platform, stayLoggedIn = false } = loginDto;
 
     const [dbUser] = await this.usersService.getUsers({ email });
 
@@ -234,7 +234,7 @@ export class AuthService {
         errorCode: ERROR_CODE.INVALID_PASSWORD,
       });
 
-    const { accessToken, refreshToken } = this.signTokens(dbUser.userId);
+    const { accessToken, refreshToken } = this.signTokens(dbUser.userId, stayLoggedIn);
 
     await this.authTokenRepository.deleteByUserId(dbUser.userId);
     await this.authTokenRepository.createToken({
@@ -248,11 +248,11 @@ export class AuthService {
       await this.upsertDeviceToken(dbUser.userId, deviceToken, platform);
     }
 
-    return { accessToken };
+    return { accessToken, stayLoggedIn };
   }
 
   async loginWithPin(pinLoginDto: PinLoginDto) {
-    const { email, pinNumber, deviceToken, platform } = pinLoginDto;
+    const { email, pinNumber, deviceToken, platform, stayLoggedIn = false } = pinLoginDto;
 
     // email로 유저를 특정하기 때문에 같은 PIN을 가진 다른 유저로 로그인되는 버그 없음
     const [dbUser] = await this.usersService.getUsers({ email });
@@ -290,7 +290,7 @@ export class AuthService {
 
     await this.usersService.resetPinFailedCount(dbUser.userId);
 
-    const { accessToken, refreshToken } = this.signTokens(dbUser.userId);
+    const { accessToken, refreshToken } = this.signTokens(dbUser.userId, stayLoggedIn);
 
     await this.authTokenRepository.deleteByUserId(dbUser.userId);
     await this.authTokenRepository.createToken({
@@ -303,7 +303,7 @@ export class AuthService {
       await this.upsertDeviceToken(dbUser.userId, deviceToken, platform);
     }
 
-    return { accessToken };
+    return { accessToken, stayLoggedIn };
   }
 
   async logout(userId: string): Promise<void> {
@@ -358,8 +358,8 @@ export class AuthService {
     return expiresAt.getTime() <= Date.now();
   }
 
-  signTokens(userId: string) {
-    const payload: JwtPayload = { sub: userId };
+  signTokens(userId: string, stayLoggedIn: boolean = false) {
+    const payload: JwtPayload = { sub: userId, stayLoggedIn };
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
