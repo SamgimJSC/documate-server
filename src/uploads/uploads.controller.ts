@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Patch,
   Param,
@@ -67,6 +68,15 @@ export class UploadsController {
       tempDocumentId,
       dto,
     );
+  }
+
+  @Delete(':tempDocumentId/files/:fileId')
+  deleteTempFile(
+    @Req() req: any,
+    @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
+    @Param('fileId', ParseUUIDPipe) fileId: string,
+  ) {
+    return this.uploadsService.deleteTempFile(req.user.userId, tempDocumentId, fileId);
   }
 
   @Post(':tempDocumentId/ai')

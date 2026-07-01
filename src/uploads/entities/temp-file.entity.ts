@@ -26,6 +26,9 @@ export class TempFile {
   @Column({ name: 'page_no', type: 'smallint' })
   pageNo: number;
 
+  @Column({ name: 'file_size_bytes', type: 'bigint', default: 0 })
+  fileSizeBytes: string;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
