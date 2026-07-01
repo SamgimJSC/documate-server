@@ -1,4 +1,4 @@
-import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Platform } from '../../global/constants/platform.enum';
 
 export class LoginDto {
@@ -21,4 +21,8 @@ export class LoginDto {
   @IsOptional()
   @IsEnum(Platform)
   platform?: Platform;
+
+  @IsOptional()
+  @IsBoolean()
+  stayLoggedIn?: boolean;
 }
