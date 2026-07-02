@@ -41,12 +41,12 @@ export class AuthController {
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken } = await this.authService.login(body);
+    const { accessToken, stayLoggedIn } = await this.authService.login(body);
     res.cookie('X-Access-Token', accessToken, {
       httpOnly: true,
       secure: false, // production 에서는 true로 하기
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      ...(stayLoggedIn && { maxAge: 30 * 24 * 60 * 60 * 1000 }),
     });
     return null;
   }
@@ -68,11 +68,12 @@ export class AuthController {
     @Body() body: PinLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken } = await this.authService.loginWithPin(body);
+    const { accessToken, stayLoggedIn } = await this.authService.loginWithPin(body);
     res.cookie('X-Access-Token', accessToken, {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
+      ...(stayLoggedIn && { maxAge: 30 * 24 * 60 * 60 * 1000 }),
     });
     return null;
   }

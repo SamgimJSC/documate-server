@@ -46,7 +46,7 @@ import { SpendCategoriesModule } from './spend-categories/spend-categories.modul
         url: config.get('DB_URL'),
         ssl: { rejectUnauthorized: false },
         database: config.get('DB_NAME'),
-        synchronize: config.get('DB_SYNCHRONIZE'),
+        synchronize: String(config.get('DB_SYNCHRONIZE')) === 'true',
         autoLoadEntities: true,
       }),
       dataSourceFactory: async (options) => {

@@ -15,6 +15,7 @@ export class TypeOrmTempFileRepository implements TempFileRepository {
     tempDocumentId: string;
     fileUrl: string;
     pageNo: number;
+    fileSizeBytes: string;
   }): Promise<TempFile> {
     const file = this.repo.create(input);
     return this.repo.save(file);
@@ -37,6 +38,14 @@ export class TypeOrmTempFileRepository implements TempFileRepository {
       where: { tempDocumentId },
       order: { pageNo: 'ASC' },
     });
+  }
+
+  async findByIdAndTempDocumentId(id: string, tempDocumentId: string): Promise<TempFile | null> {
+    return this.repo.findOne({ where: { id, tempDocumentId } });
+  }
+
+  async deleteById(id: string): Promise<void> {
+    await this.repo.delete({ id });
   }
 
   async setPageOrders(

@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDefined,
   IsEmail,
   IsEnum,
@@ -32,4 +33,8 @@ export class PinLoginDto {
   @IsOptional()
   @IsEnum(Platform)
   platform?: Platform;
+
+  @IsOptional()
+  @IsBoolean()
+  stayLoggedIn?: boolean;
 }
