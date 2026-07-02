@@ -1,6 +1,6 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { TypedConfigService } from './configs/typedConfig.service';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import { LoggerInterceptor } from './global/interceptors/logger.interceptor';
@@ -35,14 +35,15 @@ async function bootstrap() {
     // app.get(ServiceLogInterceptor),
     // app.get(TokenRefreshInterceptor),
     new ResponseInterceptor(),
-    new ClassSerializerInterceptor(app.get(Reflector)),
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  await app.listen(configService.get('PORT'));
+  const port = Number(configService.get('PORT')) || 8000;
 
-  console.log(`서버가 ${configService.get('PORT')}번포트로 열렸습니다.`);
+  await app.listen(port, '0.0.0.0');
+
+  console.log(`서버가 ${port}번 포트로 열렸습니다.`);
 }
 
 bootstrap();
