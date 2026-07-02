@@ -434,6 +434,47 @@ export class UploadsService {
     };
   }
 
+  async deleteAllTempFiles(
+    userId: string,
+    tempDocumentId: string,
+  ): Promise<void> {
+    const tempDoc = await this.tempDocumentRepo.findById(tempDocumentId);
+    if (!tempDoc) {
+      throw new ENotFoundException({
+        message: '임시 문서를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_FOUND,
+      });
+    }
+    if (tempDoc.userId !== userId) {
+      throw new EForbiddenException({
+        message: '접근 권한이 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_OWNER,
+      });
+    }
+
+    const files = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+
+    const totalBytes = files.reduce((sum, f) => sum + Number(f.fileSizeBytes), 0);
+
+    await this.tempFileRepo.deleteByTempDocumentId(tempDocumentId);
+
+    for (const file of files) {
+      try {
+        await this.deleteS3File(file.fileUrl);
+      } catch (e) {
+        this.logger.error(`temp file S3 삭제 실패 (fileId=${file.id})`, e instanceof Error ? e.stack : String(e));
+      }
+    }
+
+    if (totalBytes > 0) {
+      try {
+        await this.usersService.subtractStorageUsedBytes(userId, totalBytes);
+      } catch (e) {
+        this.logger.error(`storage_used_bytes 차감 실패 (userId=${userId})`, e instanceof Error ? e.stack : String(e));
+      }
+    }
+  }
+
   async deleteS3File(fileUrl: string): Promise<void> {
     const urlObj = new URL(fileUrl);
     const fileKey = decodeURIComponent(urlObj.pathname.slice(1));

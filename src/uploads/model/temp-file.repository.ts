@@ -48,6 +48,10 @@ export class TypeOrmTempFileRepository implements TempFileRepository {
     await this.repo.delete({ id });
   }
 
+  async deleteByTempDocumentId(tempDocumentId: string): Promise<void> {
+    await this.repo.delete({ tempDocumentId });
+  }
+
   async setPageOrders(
     tempDocumentId: string,
     files: { id: string; pageNo: number }[],
