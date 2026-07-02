@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { Card } from '../entities/card.entity';
 import { CardRepository } from './card.interface';
@@ -24,6 +24,12 @@ export class TypeOrmCardRepository implements CardRepository {
 
   async findByCardId(cardId: string): Promise<Card | null> {
     return this.repo.findOne({ where: { cardId } });
+  }
+
+  // 카드명 목록으로 조회 (receipt 없는 회원에게 보여줄 기본 카드 3종 등)
+  async findByNames(names: string[]): Promise<Card[]> {
+    if (names.length === 0) return [];
+    return this.repo.find({ where: { cardName: In(names) } });
   }
 
   async updateCard(cardId: string, dto: UpsertCardDto): Promise<Card | null> {

@@ -34,6 +34,7 @@ export interface ReceiptRepository {
   createReceipt(dto: CreateReceiptDto): Promise<Receipt>;
   findByReceiptId(receiptId: string): Promise<Receipt | null>;
   findByUserId(userId: string): Promise<Receipt[]>;
+  existsByUserId(userId: string): Promise<boolean>;
   updateReceipt(
     receiptId: string,
     dto: UpdateReceiptDto,

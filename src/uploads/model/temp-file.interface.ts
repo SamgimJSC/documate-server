@@ -16,6 +16,7 @@ export interface TempFileRepository {
   findByTempDocumentId(tempDocumentId: string): Promise<TempFile[]>;
   findByIdAndTempDocumentId(id: string, tempDocumentId: string): Promise<TempFile | null>;
   deleteById(id: string): Promise<void>;
+  deleteByTempDocumentId(tempDocumentId: string): Promise<void>;
   reorderPages(
     tempDocumentId: string,
     orderedFileIds: string[],

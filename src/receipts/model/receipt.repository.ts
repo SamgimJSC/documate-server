@@ -32,6 +32,11 @@ export class TypeOrmReceiptRepository implements ReceiptRepository {
     return this.repo.find({ where: { userId, isDeleted: false } });
   }
 
+  // 유저에게 (미삭제) 영수증이 1건이라도 있는지 확인 (카드 추천 진입 분기용)
+  async existsByUserId(userId: string): Promise<boolean> {
+    return this.repo.existsBy({ userId, isDeleted: false });
+  }
+
   async updateReceipt(
     receiptId: string,
     dto: UpdateReceiptDto,
