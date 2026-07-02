@@ -5,6 +5,7 @@ export interface CardRepository {
   createCard(dto: UpsertCardDto): Promise<Card>;
   findAll(): Promise<Card[]>;
   findByCardId(cardId: string): Promise<Card | null>;
+  findByNames(names: string[]): Promise<Card[]>;
   updateCard(cardId: string, dto: UpsertCardDto): Promise<Card | null>;
   deleteCard(cardId: string): Promise<boolean>;
 }

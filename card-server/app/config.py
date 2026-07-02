@@ -31,12 +31,7 @@ class Settings(BaseSettings):
     RECENT_DAYS: int = 30
     # 추천 카드 개수
     RECOMMEND_TOP_N: int = 3
-    # receipt 가 없는 회원에게 보여줄 기본 카드명 (spec)
-    DEFAULT_CARD_NAMES: list[str] = [
-        "삼성 iD SELECT ALL 카드",
-        "신한카드 Mr.Life",
-        "굿데이카드",
-    ]
+    # (기본 카드 3종 노출/receipt 존재 확인은 NestJS API 서버가 담당)
 
     # --- 크롤링 대상 ---
     LIST_URL: str = "https://www.card-gorilla.com/chart/top100"

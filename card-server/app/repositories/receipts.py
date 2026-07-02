@@ -3,22 +3,7 @@ from __future__ import annotations
 from app.db import get_conn
 
 # receipts 는 조회만 한다 (스키마/데이터 수정 없음).
-
-
-def has_any_receipt(user_id: str) -> bool:
-    """유저에게 (삭제되지 않은) receipt 가 1건이라도 있는지 확인한다."""
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT 1
-                FROM receipts
-                WHERE user_id = %s AND is_deleted = false
-                LIMIT 1
-                """,
-                (user_id,),
-            )
-            return cur.fetchone() is not None
+# receipt 존재 여부 확인(/cards/check)은 NestJS API 서버가 담당한다.
 
 
 def sum_amount_by_category(user_id: str, since_days: int) -> dict[int, int]:

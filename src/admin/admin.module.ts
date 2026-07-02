@@ -10,7 +10,12 @@ import { TypeOrmCardRecommendationRepository } from './model/card-recommendation
 @Module({
   imports: [TypeOrmModule.forFeature([Card, CardRecommendation])],
   controllers: [AdminController],
-  exports: [TypeOrmModule, AdminService],
+  exports: [
+    TypeOrmModule,
+    AdminService,
+    TypeOrmCardRepository,
+    TypeOrmCardRecommendationRepository,
+  ],
   providers: [
     AdminService,
     TypeOrmCardRepository,

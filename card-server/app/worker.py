@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import signal
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import redis.asyncio as aioredis
@@ -42,11 +43,23 @@ def _handle(raw: str) -> None:
         if not user_id:
             logger.warning("payload without userId: %s", raw)
             return
+        if not _is_uuid(user_id):
+            # 잘못된 형식의 userId(비-UUID)는 DB 에러를 내기 전에 걸러서 스킵한다.
+            logger.warning("invalid userId (not a uuid), skipping: %s", user_id)
+            return
 
         logger.info("recommending for user: %s", user_id)
         generate_recommendations(user_id)
     except Exception:
         logger.exception("recommendation failed: %s", user_id)
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(str(value))
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 async def _consume() -> None:

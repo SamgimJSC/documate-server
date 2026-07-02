@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from psycopg.rows import dict_row
-
 from app.db import get_conn
+
+# 추천 결과 조회(/cards/recommendation)는 NestJS API 서버가 담당한다.
+# 이 워커는 추천을 계산해 저장(교체)하는 쓰기만 수행한다.
 
 
 @dataclass
@@ -12,32 +13,6 @@ class RecommendationRow:
     card_id: str
     reason: str | None
     match_score: float | None
-
-
-def fetch_recommendations(user_id: str) -> list[dict]:
-    """유저의 기존 추천 결과를 카드 정보와 조인해 조회한다 (점수 높은 순)."""
-    with get_conn() as conn:
-        with conn.cursor(row_factory=dict_row) as cur:
-            cur.execute(
-                """
-                SELECT
-                    r.recommendation_id,
-                    r.card_id,
-                    r.reason,
-                    r.match_score,
-                    r.recommended_at,
-                    c.card_name,
-                    c.issuer,
-                    c.annual_fee,
-                    c.img_url
-                FROM card_recommendations r
-                JOIN cards c ON c.card_id = r.card_id
-                WHERE r.user_id = %s
-                ORDER BY r.match_score DESC NULLS LAST, r.recommended_at DESC
-                """,
-                (user_id,),
-            )
-            return cur.fetchall()
 
 
 def replace_recommendations(user_id: str, items: list[RecommendationRow]) -> int:
