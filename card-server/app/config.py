@@ -6,8 +6,37 @@ class Settings(BaseSettings):
     # API 서버와 동일한 단일 연결 문자열을 사용한다.
     # 예) postgresql://USER:PASSWORD@HOST:PORT/DBNAME
     DB_URL: str
-    # DB 커넥션 풀 최대 크기
-    DB_POOL_SIZE: int = 5
+    # DB 커넥션 풀 최대 크기 (spec: 2)
+    DB_POOL_SIZE: int = 2
+
+    # --- Redis (추천 작업 큐) ---
+    # API 서버가 RPUSH, card-server 워커가 BLPOP 하는 큐.
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
+    REDIS_DB: int = 0
+    CARD_QUEUE_KEY: str = "card:queue"
+
+    # --- Ollama (로컬 LLM, 추천 사유 문장 생성) ---
+    OLLAMA_HOST: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "gemma3:1b"
+    OLLAMA_TIMEOUT: int = 60
+    # 로컬 LLM 동시 호출 수 (OOM 방지, spec: 1)
+    LLM_CONCURRENCY: int = 1
+    # LLM 로 사유 문장을 생성할지 여부. False 면 규칙 기반 문장만 사용.
+    USE_LLM_REASON: bool = True
+
+    # --- 추천 로직 ---
+    # 소비 분석 대상 최근 기간(일)
+    RECENT_DAYS: int = 30
+    # 추천 카드 개수
+    RECOMMEND_TOP_N: int = 3
+    # receipt 가 없는 회원에게 보여줄 기본 카드명 (spec)
+    DEFAULT_CARD_NAMES: list[str] = [
+        "삼성 iD SELECT ALL 카드",
+        "신한카드 Mr.Life",
+        "굿데이카드",
+    ]
 
     # --- 크롤링 대상 ---
     LIST_URL: str = "https://www.card-gorilla.com/chart/top100"

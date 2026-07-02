@@ -1,9 +1,50 @@
 from __future__ import annotations
 
+from psycopg.rows import dict_row
 from psycopg.types.json import Json
 
 from app.db import get_conn
 from app.models import Card
+
+
+def fetch_all_cards() -> list[dict]:
+    """추천 매칭용으로 전체 카드를 조회한다.
+
+    반환 각 항목: {card_id, card_name, issuer, annual_fee, img_url, benefits}
+    """
+    with get_conn() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT card_id, card_name, issuer, annual_fee, img_url, benefits
+                FROM cards
+                """
+            )
+            return cur.fetchall()
+
+
+def fetch_cards_by_names(names: list[str]) -> list[dict]:
+    """카드명 목록으로 카드를 조회한다 (기본 추천 카드 표시용).
+
+    입력한 names 순서를 유지해서 반환한다.
+    """
+    if not names:
+        return []
+    with get_conn() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT card_id, card_name, issuer, annual_fee, img_url, benefits
+                FROM cards
+                WHERE card_name = ANY(%s)
+                """,
+                (names,),
+            )
+            rows = cur.fetchall()
+
+    by_name = {r["card_name"]: r for r in rows}
+    return [by_name[n] for n in names if n in by_name]
+
 
 # `cards` 테이블은 card_id(uuid) 를 자동생성 PK 로 쓰고 source_url 에는 UNIQUE 제약이
 # 없다(엔티티 기준). DDL 은 API 서버 소관이라 여기서 제약을 추가할 수 없으므로,

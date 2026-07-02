@@ -5,12 +5,15 @@ import logging
 
 from pydantic import ValidationError
 
-from app.crawler import BrowserSession, collect_card_list, fetch_all_details
 from app.db import close_pool, init_pool
 from app.models import Card, CardListItem
 from app.normalizer import normalize_card
 from app.parser import parse_detail
 from app.repositories import upsert_card
+
+from .browser import BrowserSession
+from .detail_page import fetch_all_details
+from .list_page import collect_card_list
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +28,7 @@ async def run() -> dict:
     init_pool()
     try:
         async with BrowserSession() as context:
-            # 1) 목록 수집 (실패 시 배치 전체 중단, plan §7-1)
+            # 1) 목록 수집 (실패 시 배치 전체 중단)
             items = await collect_card_list(context)
             stats["total"] = len(items)
             if not items:
@@ -68,15 +71,3 @@ async def run() -> dict:
 def _to_card(item: CardListItem, html: str) -> Card:
     raw = parse_detail(html)
     return normalize_card(item, raw)
-
-
-def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
-    asyncio.run(run())
-
-
-if __name__ == "__main__":
-    main()
