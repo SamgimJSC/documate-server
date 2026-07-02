@@ -25,13 +25,11 @@ export class UserSecurity {
   @Column({ name: 'biometric_enabled', type: 'boolean', default: false })
   biometricEnabled: boolean;
 
-  @Column({
-    name: 'biometric_type',
-    type: 'enum',
-    enum: BiometricType,
-    nullable: true,
-  })
+  @Column({ name: 'biometric_type', type: 'varchar', length: 10, nullable: true })
   biometricType: BiometricType | null;
+
+  @Column({ name: 'public_key', type: 'varchar', length: 2000, nullable: true })
+  publicKey: string | null;
 
   @Column({ name: 'pin_failed_count', type: 'smallint', default: 0 })
   pinFailedCount: number;

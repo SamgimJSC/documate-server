@@ -16,6 +16,7 @@ import { TypeOrmUserSettingsRepository } from './model/user-settings.repository'
 import { type UserSettingsRepository } from './model/user-settings.interface';
 import { Transactional } from 'typeorm-transactional';
 import * as bcrypt from 'bcrypt';
+import type { BiometricType } from '../global/constants/biometricType.enum';
 
 @Injectable()
 export class UsersService {
@@ -171,6 +172,27 @@ export class UsersService {
       pinUpdatedAt: new Date(),
       pinFailedCount: 0,
     });
+  }
+
+  async updateBiometric(
+    userId: string,
+    biometricEnabled: boolean,
+    biometricType: BiometricType | null,
+    publicKey: string | null,
+  ) {
+    const updated = await this.userSecurityRepo.updateSecurity(userId, {
+      biometricEnabled,
+      biometricType,
+      publicKey,
+    });
+
+    if (!updated)
+      throw new ENotFoundException({
+        message: '존재하지 않는 계정입니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+
+    return updated;
   }
 
   async incrementPinFailedCount(userId: string) {
