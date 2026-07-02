@@ -70,6 +70,14 @@ export class UploadsController {
     );
   }
 
+  @Delete(':tempDocumentId/files')
+  deleteAllTempFiles(
+    @Req() req: any,
+    @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
+  ) {
+    return this.uploadsService.deleteAllTempFiles(req.user.userId, tempDocumentId);
+  }
+
   @Delete(':tempDocumentId/files/:fileId')
   deleteTempFile(
     @Req() req: any,
