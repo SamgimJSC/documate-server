@@ -16,6 +16,11 @@ import { type Response } from 'express';
 import { JwtAuthGuard } from './auth.guard';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { PinLoginDto } from './dto/pinLogin.dto';
+import { BiometricEnableDto } from './dto/biometricEnable.dto';
+import { BiometricChallengeDto } from './dto/biometricChallenge.dto';
+import { BiometricVerifyDto } from './dto/biometricVerify.dto';
+import { DecoUser } from '../global/decorators/decoUser.decorator';
+import type { ReqUser } from '../global/types/express';
 
 @Controller('auth')
 export class AuthController {
@@ -82,6 +87,29 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(body);
+  }
+
+  @Post('biometric/enable')
+  @UseGuards(JwtAuthGuard)
+  async setBiometric(
+    @DecoUser() user: ReqUser,
+    @Body() body: BiometricEnableDto,
+  ) {
+    return this.authService.setBiometric(user.userId, body);
+  }
+
+  @Post('biometric/challenge')
+  async createBiometricChallenge(@Body() body: BiometricChallengeDto) {
+    return this.authService.createBiometricChallenge(body);
+  }
+
+  @Post('biometric/verify')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async verifyBiometricChallenge(
+    @Body() body: BiometricVerifyDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.verifyBiometricChallenge(body, res);
   }
 
 }

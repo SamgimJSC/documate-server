@@ -13,10 +13,12 @@ import { EmailVerification } from './entities/email-verification.entity';
 import { AuthToken } from './entities/auth-token.entity';
 import { NodeMailer } from './providors/nodeMailer';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { BiometricChallenge } from './entities/biometric-challenge.entity';
+import { TypeOrmBiometricChallengeRepository } from './model/biometric-challenge.repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EmailVerification, AuthToken, DeviceToken]),
+    TypeOrmModule.forFeature([EmailVerification, AuthToken, DeviceToken, BiometricChallenge]),
     JwtModule.registerAsync({
       inject: [TypedConfigService],
       useFactory: (config: TypedConfigService) => ({
@@ -34,6 +36,7 @@ import { DeviceToken } from '../notifications/entities/device-token.entity';
     JwtAuthGuard,
     TypeOrmEmailVerificationRepository,
     TypeOrmAuthTokenRepository,
+    TypeOrmBiometricChallengeRepository,
   ],
   exports: [AuthService, JwtModule, JwtAuthGuard, NodeMailer],
 })
