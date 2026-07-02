@@ -7,6 +7,7 @@ psycopg-pool==3.2.6
 
 redis==6.4.0
 
+# paddlex / ollama / pydantic-settings 호환을 위해 Pydantic v2 유지
 pydantic==2.11.7
 pydantic-settings==2.10.1
 
@@ -18,9 +19,12 @@ paddleocr==3.1.0
 paddlepaddle==3.1.0
 paddlex==3.1.4
 pillow==11.3.0
-numpy==2.2.6
 
-# paddlepaddle 가 런타임에 import 하지만 Python 3.12+ venv 에는 기본 포함되지 않음
+# langchain==0.2.17은 Python 3.11에서 numpy<2 요구
+# paddlex는 numpy>=1.24라서 1.26.4로 맞추면 양쪽 조건 충족
+numpy==1.26.4
+
+# paddlepaddle 런타임 보조
 setuptools==82.0.1
 
 ollama==0.5.3
@@ -29,6 +33,13 @@ python-dotenv==1.1.1
 
 orjson==3.11.2
 
-tenacity==9.1.2
+tenacity==8.5.0
 
 aiofiles==24.1.0
+
+# paddlex 내부 import:
+# from langchain.docstore.document import Document 대응용
+langchain==0.2.17
+langchain-core==0.2.43
+langchain-text-splitters==0.2.4
+langsmith==0.1.147

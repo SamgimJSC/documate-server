@@ -16,6 +16,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
+import { CardsModule } from './cards/cards.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './redis/redis.module';
@@ -74,6 +75,8 @@ import { SpendCategoriesModule } from './spend-categories/spend-categories.modul
     PaymentsModule,
 
     AdminModule,
+
+    CardsModule,
 
     UploadsModule,
 
