@@ -16,6 +16,10 @@ import { type Response } from 'express';
 import { JwtAuthGuard } from './auth.guard';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { PinLoginDto } from './dto/pinLogin.dto';
+import { VerifyPasswordDto } from './dto/verifyPassword.dto';
+import { UpdatePasswordDto } from './dto/updatePassword.dto';
+import { DecoUser } from '../global/decorators/decoUser.decorator';
+import type { ReqUser } from '../global/types/express';
 
 @Controller('auth')
 export class AuthController {
@@ -59,7 +63,9 @@ export class AuthController {
   ) {
     res.clearCookie('X-Access-Token', { httpOnly: true, sameSite: 'lax' });
     if (deviceToken) {
-      await this.authService.deactivateDeviceTokenByFcmString(deviceToken).catch(() => {});
+      await this.authService
+        .deactivateDeviceTokenByFcmString(deviceToken)
+        .catch(() => {});
     }
   }
 
@@ -68,7 +74,8 @@ export class AuthController {
     @Body() body: PinLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, stayLoggedIn } = await this.authService.loginWithPin(body);
+    const { accessToken, stayLoggedIn } =
+      await this.authService.loginWithPin(body);
     res.cookie('X-Access-Token', accessToken, {
       httpOnly: true,
       secure: false,
@@ -84,4 +91,23 @@ export class AuthController {
     return this.authService.resetPassword(body);
   }
 
+  @Post('password/verify')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async verifyPassword(
+    @DecoUser() user: ReqUser,
+    @Body() body: VerifyPasswordDto,
+  ) {
+    return this.authService.verifyPassword(user.userId, body);
+  }
+
+  @Post('password/update')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async updatePassword(
+    @DecoUser() user: ReqUser,
+    @Body() body: UpdatePasswordDto,
+  ) {
+    return this.authService.updatePassword(user.userId, body);
+  }
 }

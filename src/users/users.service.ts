@@ -4,18 +4,21 @@ import { GetUsersQueryDto } from './dto/getUsersQuery.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import type { UpdateUserSettingsDto } from './dto/updateUserSettings.dto';
 import { UpdatePinDto } from './dto/updatePin.dto';
+import { UpdateNicknameDto } from './dto/updateNickname.dto';
 import { TypeOrmUserRepository } from './model/users.repository';
 import { type UserRepository } from './model/users.interface';
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { EUnauthorizedException } from '../global/exceptions/EUnauthorizedException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { EConflictException } from '../global/exceptions/EConflictException';
+import { EBadRequestException } from '../global/exceptions/EBadRequestException';
 import { TypeOrmUserSecurityRepository } from './model/user-security.repository';
 import { type UserSecurityRepository } from './model/user-security.interface';
 import { TypeOrmUserSettingsRepository } from './model/user-settings.repository';
 import { type UserSettingsRepository } from './model/user-settings.interface';
 import { Transactional } from 'typeorm-transactional';
 import * as bcrypt from 'bcrypt';
+import { rNickname } from '../global/reg';
 
 @Injectable()
 export class UsersService {
@@ -88,6 +91,29 @@ export class UsersService {
     return updated;
   }
 
+  async updateMyNickname(userId: string, dto: UpdateNicknameDto) {
+    if (typeof dto.nickname !== 'string') {
+      throw new EBadRequestException({
+        message: 'Invalid nickname.',
+        errorCode: ERROR_CODE.INVALID_NICKNAME,
+      });
+    }
+
+    const nickname = dto.nickname.trim();
+
+    if (!rNickname.test(nickname)) {
+      throw new EBadRequestException({
+        message:
+          'Nickname must be 2-8 characters and contain only Korean or English letters.',
+        errorCode: ERROR_CODE.INVALID_NICKNAME,
+      });
+    }
+
+    const updated = await this.updateUser(userId, { nickname });
+
+    return { success: true, nickname: updated.nickname };
+  }
+
   async deleteUser(userId: string, withdrawalReason?: string) {
     const deleted: boolean = await this.userRepo.softDeleteUser(
       userId,
@@ -156,7 +182,10 @@ export class UsersService {
         errorCode: ERROR_CODE.PIN_NOT_SET,
       });
 
-    const isValid = await bcrypt.compare(updatePinDto.currentPin, security.pinHash);
+    const isValid = await bcrypt.compare(
+      updatePinDto.currentPin,
+      security.pinHash,
+    );
 
     if (!isValid)
       throw new EUnauthorizedException({

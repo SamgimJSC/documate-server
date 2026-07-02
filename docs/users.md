@@ -28,14 +28,15 @@ Base URL: `/users`
 
 ## 에러 코드
 
-| errorCode | 설명 |
-|---|---|
-| `USER_NOT_FOUND` | 존재하지 않는 사용자 |
-| `EMAIL_ALREADY_USED` | 이미 사용 중인 이메일 |
-| `NICKNAME_ALREADY_USED` | 이미 사용 중인 닉네임 |
-| `INVALID_TOKEN` | 유효하지 않은 인증 토큰 |
-| `INVALID_PIN` | PIN 불일치 |
-| `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
+| errorCode               | 설명                     |
+| ----------------------- | ------------------------ |
+| `USER_NOT_FOUND`        | 존재하지 않는 사용자     |
+| `EMAIL_ALREADY_USED`    | 이미 사용 중인 이메일    |
+| `NICKNAME_ALREADY_USED` | 이미 사용 중인 닉네임    |
+| `INVALID_NICKNAME`      | 잘못된 닉네임 형식       |
+| `INVALID_TOKEN`         | 유효하지 않은 인증 토큰  |
+| `INVALID_PIN`           | PIN 불일치               |
+| `PIN_NOT_SET`           | PIN이 설정되어 있지 않음 |
 
 ---
 
@@ -51,12 +52,12 @@ GET /users
 
 **Query Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `email` | string | N | 이메일 (최대 255자) |
-| `nickname` | string | N | 닉네임 (최대 30자) |
-| `role` | string | N | 역할 (`ADMIN` \| `MEMBER`) |
-| `plan` | string | N | 플랜 (`FREE` \| `PRO`) |
+| 파라미터   | 타입   | 필수 | 설명                       |
+| ---------- | ------ | ---- | -------------------------- |
+| `email`    | string | N    | 이메일 (최대 255자)        |
+| `nickname` | string | N    | 닉네임 (최대 30자)         |
+| `role`     | string | N    | 역할 (`ADMIN` \| `MEMBER`) |
+| `plan`     | string | N    | 플랜 (`FREE` \| `PRO`)     |
 
 **Request 예시**
 
@@ -90,9 +91,9 @@ GET /users?role=MEMBER&plan=FREE
 
 **에러 응답**
 
-| HTTP Status | errorCode | 설명 |
-|---|---|---|
-| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
+| HTTP Status | errorCode       | 설명                     |
+| ----------- | --------------- | ------------------------ |
+| 401         | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
 
 ---
 
@@ -106,9 +107,9 @@ GET /users/:id
 
 **Path Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | string (UUID) | Y | 사용자 UUID |
+| 파라미터 | 타입          | 필수 | 설명        |
+| -------- | ------------- | ---- | ----------- |
+| `id`     | string (UUID) | Y    | 사용자 UUID |
 
 **Request 예시**
 
@@ -140,10 +141,10 @@ GET /users/550e8400-e29b-41d4-a716-446655440000
 
 **에러 응답**
 
-| HTTP Status | errorCode | 설명 |
-|---|---|---|
-| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
-| 404 | `USER_NOT_FOUND` | 해당 ID의 사용자 없음 |
+| HTTP Status | errorCode        | 설명                     |
+| ----------- | ---------------- | ------------------------ |
+| 401         | `INVALID_TOKEN`  | 인증 토큰 없음 또는 만료 |
+| 404         | `USER_NOT_FOUND` | 해당 ID의 사용자 없음    |
 
 ---
 
@@ -157,13 +158,13 @@ POST /users
 
 **Request Body**
 
-| 필드 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `email` | string | Y | 이메일 주소 |
-| `password` | string | Y | 비밀번호 (8~20자, 영문+숫자 조합 필수) |
-| `nickname` | string | Y | 닉네임 (2~8자, 한글 또는 영문만 허용) |
-| `realName` | string | N | 실명 (최대 50자) |
-| `profileImgUrl` | string | N | 프로필 이미지 URL (최대 500자) |
+| 필드            | 타입   | 필수 | 설명                                   |
+| --------------- | ------ | ---- | -------------------------------------- |
+| `email`         | string | Y    | 이메일 주소                            |
+| `password`      | string | Y    | 비밀번호 (8~20자, 영문+숫자 조합 필수) |
+| `nickname`      | string | Y    | 닉네임 (2~8자, 한글 또는 영문만 허용)  |
+| `realName`      | string | N    | 실명 (최대 50자)                       |
+| `profileImgUrl` | string | N    | 프로필 이미지 URL (최대 500자)         |
 
 **Request 예시**
 
@@ -195,11 +196,11 @@ POST /users
 
 **에러 응답**
 
-| HTTP Status | errorCode | 설명 |
-|---|---|---|
-| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
-| 409 | `EMAIL_ALREADY_USED` | 이미 사용 중인 이메일 |
-| 409 | `NICKNAME_ALREADY_USED` | 이미 사용 중인 닉네임 |
+| HTTP Status | errorCode               | 설명                     |
+| ----------- | ----------------------- | ------------------------ |
+| 401         | `INVALID_TOKEN`         | 인증 토큰 없음 또는 만료 |
+| 409         | `EMAIL_ALREADY_USED`    | 이미 사용 중인 이메일    |
+| 409         | `NICKNAME_ALREADY_USED` | 이미 사용 중인 닉네임    |
 
 ---
 
@@ -213,19 +214,19 @@ PATCH /users/:id
 
 **Path Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | string (UUID) | Y | 사용자 UUID |
+| 파라미터 | 타입          | 필수 | 설명        |
+| -------- | ------------- | ---- | ----------- |
+| `id`     | string (UUID) | Y    | 사용자 UUID |
 
 **Request Body**
 
-| 필드 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `email` | string | N | 이메일 주소 |
-| `password` | string | N | 비밀번호 (8~255자) |
-| `nickname` | string | N | 닉네임 (최대 30자) |
-| `realName` | string | N | 실명 (최대 50자) |
-| `profileImgUrl` | string | N | 프로필 이미지 URL (최대 500자) |
+| 필드            | 타입   | 필수 | 설명                           |
+| --------------- | ------ | ---- | ------------------------------ |
+| `email`         | string | N    | 이메일 주소                    |
+| `password`      | string | N    | 비밀번호 (8~255자)             |
+| `nickname`      | string | N    | 닉네임 (최대 30자)             |
+| `realName`      | string | N    | 실명 (최대 50자)               |
+| `profileImgUrl` | string | N    | 프로필 이미지 URL (최대 500자) |
 
 **Request 예시**
 
@@ -254,12 +255,12 @@ PATCH /users/:id
 
 **에러 응답**
 
-| HTTP Status | errorCode | 설명 |
-|---|---|---|
-| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
-| 404 | `USER_NOT_FOUND` | 해당 ID의 사용자 없음 |
-| 409 | `EMAIL_ALREADY_USED` | 이미 사용 중인 이메일 |
-| 409 | `NICKNAME_ALREADY_USED` | 이미 사용 중인 닉네임 |
+| HTTP Status | errorCode               | 설명                     |
+| ----------- | ----------------------- | ------------------------ |
+| 401         | `INVALID_TOKEN`         | 인증 토큰 없음 또는 만료 |
+| 404         | `USER_NOT_FOUND`        | 해당 ID의 사용자 없음    |
+| 409         | `EMAIL_ALREADY_USED`    | 이미 사용 중인 이메일    |
+| 409         | `NICKNAME_ALREADY_USED` | 이미 사용 중인 닉네임    |
 
 ---
 
@@ -275,9 +276,9 @@ POST /users/me/pin/verify
 
 **Request Body**
 
-| 필드 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `pinNumber` | string | Y | 검증할 6자리 숫자 PIN |
+| 필드        | 타입   | 필수 | 설명                  |
+| ----------- | ------ | ---- | --------------------- |
+| `pinNumber` | string | Y    | 검증할 6자리 숫자 PIN |
 
 **Request 예시**
 
@@ -293,11 +294,11 @@ POST /users/me/pin/verify
 
 **에러 응답**
 
-| HTTP Status | errorCode | 설명 |
-|---|---|---|
-| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
-| 401 | `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
-| 401 | `INVALID_PIN` | PIN 불일치 |
+| HTTP Status | errorCode       | 설명                     |
+| ----------- | --------------- | ------------------------ |
+| 401         | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
+| 401         | `PIN_NOT_SET`   | PIN이 설정되어 있지 않음 |
+| 401         | `INVALID_PIN`   | PIN 불일치               |
 
 ---
 
@@ -313,10 +314,10 @@ PATCH /users/me/pin
 
 **Request Body**
 
-| 필드 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `currentPin` | string | Y | 현재 6자리 숫자 PIN |
-| `newPin` | string | Y | 변경할 새 6자리 숫자 PIN |
+| 필드         | 타입   | 필수 | 설명                     |
+| ------------ | ------ | ---- | ------------------------ |
+| `currentPin` | string | Y    | 현재 6자리 숫자 PIN      |
+| `newPin`     | string | Y    | 변경할 새 6자리 숫자 PIN |
 
 **Request 예시**
 
@@ -333,11 +334,11 @@ PATCH /users/me/pin
 
 **에러 응답**
 
-| HTTP Status | errorCode | 설명 |
-|---|---|---|
-| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
-| 401 | `PIN_NOT_SET` | PIN이 설정되어 있지 않음 |
-| 401 | `INVALID_PIN` | 현재 PIN 불일치 |
+| HTTP Status | errorCode       | 설명                     |
+| ----------- | --------------- | ------------------------ |
+| 401         | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
+| 401         | `PIN_NOT_SET`   | PIN이 설정되어 있지 않음 |
+| 401         | `INVALID_PIN`   | 현재 PIN 불일치          |
 
 ---
 
@@ -353,15 +354,15 @@ DELETE /users/:id
 
 **Path Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | string (UUID) | Y | 사용자 UUID |
+| 파라미터 | 타입          | 필수 | 설명        |
+| -------- | ------------- | ---- | ----------- |
+| `id`     | string (UUID) | Y    | 사용자 UUID |
 
 **Query Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `reason` | string | N | 삭제 사유 |
+| 파라미터 | 타입   | 필수 | 설명      |
+| -------- | ------ | ---- | --------- |
+| `reason` | string | N    | 삭제 사유 |
 
 **Request 예시**
 
@@ -375,7 +376,54 @@ DELETE /users/550e8400-e29b-41d4-a716-446655440000?reason=회원탈퇴
 
 **에러 응답**
 
-| HTTP Status | errorCode | 설명 |
-|---|---|---|
-| 401 | `INVALID_TOKEN` | 인증 토큰 없음 또는 만료 |
-| 404 | `USER_NOT_FOUND` | 해당 ID의 사용자 없음 |
+| HTTP Status | errorCode        | 설명                     |
+| ----------- | ---------------- | ------------------------ |
+| 401         | `INVALID_TOKEN`  | 인증 토큰 없음 또는 만료 |
+| 404         | `USER_NOT_FOUND` | 해당 ID의 사용자 없음    |
+
+---
+
+### 8. 닉네임 변경
+
+현재 로그인한 사용자의 닉네임을 변경합니다. 닉네임 중복은 허용합니다.
+
+```
+PATCH /users/me/nickname
+```
+
+**Request Body**
+
+| 필드       | 타입   | 필수 | 설명                                                    |
+| ---------- | ------ | ---- | ------------------------------------------------------- |
+| `nickname` | string | Y    | 닉네임 (앞뒤 공백 제거 후 2~8자, 한글 또는 영문만 허용) |
+
+**Request 예시**
+
+```json
+{
+  "nickname": "새닉네임"
+}
+```
+
+**Response 예시**
+
+```json
+{
+  "message": "SUCCESS",
+  "error": "",
+  "errorCode": "",
+  "statusCode": 200,
+  "data": {
+    "success": true,
+    "nickname": "새닉네임"
+  }
+}
+```
+
+**에러 응답**
+
+| HTTP Status | errorCode          | 설명                     |
+| ----------- | ------------------ | ------------------------ |
+| 400         | `INVALID_NICKNAME` | 닉네임 형식 오류         |
+| 401         | `INVALID_TOKEN`    | 인증 토큰 없음 또는 만료 |
+| 404         | `USER_NOT_FOUND`   | 사용자 없음              |
