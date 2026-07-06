@@ -17,6 +17,7 @@ import { type UserSettingsRepository } from './model/user-settings.interface';
 import { Transactional } from 'typeorm-transactional';
 import * as bcrypt from 'bcrypt';
 import type { BiometricType } from '../global/constants/biometricType.enum';
+import { PIN_MAX_FAILED_ATTEMPTS } from '../global/constants/pin.const';
 
 @Injectable()
 export class UsersService {
@@ -130,6 +131,11 @@ export class UsersService {
     return updated;
   }
 
+  /*
+    PIN 검증 (문서 잠금 열람/설정, 마이페이지 PIN 확인 등 모든 곳에서 공용으로 사용)
+    - loginWithPin과 동일하게 pinFailedCount를 누적/초기화함
+    - 예외 없이 항상 lockout을 적용해야 세션 탈취 시 무제한 브루트포스를 막을 수 있음
+  */
   async verifyPin(userId: string, pinNumber: string): Promise<void> {
     const security = await this.userSecurityRepo.findByUserId(userId);
 
@@ -139,13 +145,23 @@ export class UsersService {
         errorCode: ERROR_CODE.PIN_NOT_SET,
       });
 
+    if (security.pinFailedCount >= PIN_MAX_FAILED_ATTEMPTS)
+      throw new EUnauthorizedException({
+        message: 'PIN 입력 횟수를 초과했습니다. 이메일 로그인을 이용해주세요.',
+        errorCode: ERROR_CODE.PIN_LOCKED,
+      });
+
     const isValid = await bcrypt.compare(pinNumber, security.pinHash);
 
-    if (!isValid)
+    if (!isValid) {
+      await this.userSecurityRepo.incrementPinFailedCount(userId);
       throw new EUnauthorizedException({
-        message: '현재 PIN이 일치하지 않습니다.',
+        message: 'PIN이 일치하지 않습니다.',
         errorCode: ERROR_CODE.INVALID_PIN,
       });
+    }
+
+    await this.userSecurityRepo.resetPinFailedCount(userId);
   }
 
   async updatePin(userId: string, updatePinDto: UpdatePinDto) {

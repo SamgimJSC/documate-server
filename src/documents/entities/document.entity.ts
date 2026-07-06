@@ -79,6 +79,10 @@ export class Document {
   @Column({ name: 'is_confirmed', type: 'boolean', default: false })
   isConfirmed: boolean;
 
+  // synchronize: false 환경에서는 아래 컬럼을 마이그레이션으로 적용해야 합니다.
+  @Column({ name: 'is_locked', type: 'boolean', default: false })
+  isLocked: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
