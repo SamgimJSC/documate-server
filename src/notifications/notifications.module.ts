@@ -30,7 +30,7 @@ import { UserSettings } from '../users/entities/user-settings.entity';
     AuthModule,
   ],
   controllers: [NotificationsController],
-  exports: [TypeOrmModule, NotificationsService, FcmService],
+  exports: [TypeOrmModule, NotificationsService, FcmService, NotificationScheduler],
   providers: [
     NotificationsService,
     TypeOrmNotificationRepository,
