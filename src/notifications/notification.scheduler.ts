@@ -99,6 +99,36 @@ export class NotificationScheduler {
   }
 
   /*
+    알림 생성/수정 직후 즉시 발송 체크용
+    - notifyDate가 오늘이거나 이미 지난 경우, 다음날 크론을 기다리지 않고 바로 처리
+      (오전 9시 이후에 당일 알림을 설정하면 그날 크론은 이미 지나가서,
+       다음날 크론 때까지 밀렸다가 D+1로 잘못 표시되는 문제 방지)
+    - 아직 발송 대상이 아니면(notifyDate가 미래) 아무것도 하지 않고 크론에 맡김
+  */
+  async dispatchIfDueNow(alertId: string): Promise<void> {
+    const today = new Date();
+    const alert = await this.documentAlertRepo.findOne({
+      where: { alertId, isSent: false, notifyDate: LessThanOrEqual(today) },
+      relations: { document: true, user: true },
+    });
+
+    if (!alert || alert.document == null) return;
+
+    const userSettings = await this.userSettingsRepo.findOne({
+      where: { userId: alert.userId },
+    });
+
+    try {
+      await this.processAlert(alert, userSettings);
+    } catch (err) {
+      this.logger.error(
+        `알림 즉시 발송 실패 (alertId=${alertId})`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
+  /*
      개별 알림 처리
   1) notifications 피드 기록
   2) FCM으로 푸시 발송 (앱/웹 채널 둘 중 하나라도 켜져있으면)

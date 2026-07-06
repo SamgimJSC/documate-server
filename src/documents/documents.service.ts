@@ -38,6 +38,7 @@ import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { PDFDocument } from 'pdf-lib';
 import axios from 'axios';
 import { UploadsService } from '../uploads/uploads.service';
+import { NotificationScheduler } from '../notifications/notification.scheduler';
 
 @Injectable()
 export class DocumentsService {
@@ -51,6 +52,7 @@ export class DocumentsService {
     private readonly documentActivityRepository: TypeOrmDocumentActivityRepository,
     private readonly documentAlertRepository: TypeOrmDocumentAlertRepository,
     private readonly uploadsService: UploadsService,
+    private readonly notificationScheduler: NotificationScheduler,
   ) {}
 
   async getCategories(): Promise<DocumentCategory[]> {
@@ -365,6 +367,9 @@ export class DocumentsService {
       description: dto.offsetType,
     });
 
+    // notifyDate가 오늘이거나 이미 지난 경우, 다음날 크론까지 기다리지 않고 즉시 발송
+    await this.notificationScheduler.dispatchIfDueNow(alert.alertId);
+
     return alert;
   }
 
@@ -424,9 +429,15 @@ export class DocumentsService {
       }
     }
 
+    // notifyDate가 바뀌면 예전 날짜 기준으로 이미 발송 완료된 상태(is_sent)를 초기화
+    // (안 그러면 새 날짜가 되어도 발송 완료 처리 때문에 다시는 안 나감)
+    const isNotifyDateChanged =
+      dto.notifyDate !== undefined &&
+      new Date(dto.notifyDate).getTime() !== new Date(alert.notifyDate).getTime();
+
     const updated = await this.documentAlertRepository.updateAlert(
       alertId,
-      dto,
+      isNotifyDateChanged ? { ...dto, isSent: false, sentAt: null } : dto,
     );
     if (!updated) {
       throw new ENotFoundException({
@@ -434,6 +445,10 @@ export class DocumentsService {
         message: '알림을 찾을 수 없습니다.',
       });
     }
+
+    // notifyDate가 오늘이거나 이미 지난 경우, 다음날 크론까지 기다리지 않고 즉시 발송
+    await this.notificationScheduler.dispatchIfDueNow(alertId);
+
     return updated;
   }
 
