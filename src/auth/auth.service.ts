@@ -33,6 +33,7 @@ import { BiometricChallengeDto } from './dto/biometricChallenge.dto';
 import { BiometricVerifyDto } from './dto/biometricVerify.dto';
 import { type BiometricChallengeRepository } from './model/biometric-challenge.interface';
 import { TypeOrmBiometricChallengeRepository } from './model/biometric-challenge.repository';
+import { PIN_MAX_FAILED_ATTEMPTS } from '../global/constants/pin.const';
 
 @Injectable()
 export class AuthService {
@@ -280,8 +281,7 @@ export class AuthService {
         errorCode: ERROR_CODE.PIN_NOT_SET,
       });
 
-    const PIN_MAX_FAILED = 5;
-    if (security.pinFailedCount >= PIN_MAX_FAILED)
+    if (security.pinFailedCount >= PIN_MAX_FAILED_ATTEMPTS)
       throw new EUnauthorizedException({
         message: 'PIN 입력 횟수를 초과했습니다. 이메일 로그인을 이용해주세요.',
         errorCode: ERROR_CODE.PIN_LOCKED,
