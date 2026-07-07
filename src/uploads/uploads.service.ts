@@ -225,7 +225,12 @@ export class UploadsService {
 
     const fileUrl = this.buildFileUrl(fileKey);
     try {
-      await this.tempFileRepo.insert({ tempDocumentId, fileUrl, pageNo, fileSizeBytes: String(file.size) });
+      await this.tempFileRepo.insert({
+        tempDocumentId,
+        fileUrl,
+        pageNo,
+        fileSizeBytes: String(file.size),
+      });
     } catch (e) {
       if (e instanceof Error && 'code' in e && e.code === '23505') {
         throw new EConflictException({
@@ -266,6 +271,39 @@ export class UploadsService {
         fileSizeBytes: f.fileSizeBytes,
       })),
     }));
+  }
+
+  async getTempDocumentStatus(
+    userId: string,
+    tempDocumentId: string,
+  ): Promise<TempDocumentListItem> {
+    const tempDoc = await this.tempDocumentRepo.findById(tempDocumentId);
+    if (!tempDoc) {
+      throw new ENotFoundException({
+        message: '임시 문서를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_FOUND,
+      });
+    }
+    if (tempDoc.userId !== userId) {
+      throw new EForbiddenException({
+        message: '접근 권한이 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_OWNER,
+      });
+    }
+
+    const files = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+
+    return {
+      tempDocumentId: tempDoc.tempDocumentId,
+      aiStatus: tempDoc.aiStatus,
+      createdAt: tempDoc.createdAt,
+      files: files.map((f) => ({
+        id: f.id,
+        fileUrl: f.fileUrl,
+        pageNo: f.pageNo,
+        fileSizeBytes: f.fileSizeBytes,
+      })),
+    };
   }
 
   async reorderTempFiles(
@@ -397,7 +435,10 @@ export class UploadsService {
       });
     }
 
-    const tempFile = await this.tempFileRepo.findByIdAndTempDocumentId(fileId, tempDocumentId);
+    const tempFile = await this.tempFileRepo.findByIdAndTempDocumentId(
+      fileId,
+      tempDocumentId,
+    );
     if (!tempFile) {
       throw new ENotFoundException({
         message: '파일을 찾을 수 없습니다.',
@@ -410,7 +451,10 @@ export class UploadsService {
     try {
       await this.deleteS3File(tempFile.fileUrl);
     } catch (e) {
-      this.logger.error(`temp file S3 삭제 실패 (fileId=${fileId})`, e instanceof Error ? e.stack : String(e));
+      this.logger.error(
+        `temp file S3 삭제 실패 (fileId=${fileId})`,
+        e instanceof Error ? e.stack : String(e),
+      );
     }
 
     const fileBytes = Number(tempFile.fileSizeBytes);
@@ -418,11 +462,15 @@ export class UploadsService {
       try {
         await this.usersService.subtractStorageUsedBytes(userId, fileBytes);
       } catch (e) {
-        this.logger.error(`storage_used_bytes 차감 실패 (userId=${userId})`, e instanceof Error ? e.stack : String(e));
+        this.logger.error(
+          `storage_used_bytes 차감 실패 (userId=${userId})`,
+          e instanceof Error ? e.stack : String(e),
+        );
       }
     }
 
-    const allFiles = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
+    const allFiles =
+      await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
     return {
       tempDocumentId,
       files: allFiles.map((f) => ({
@@ -454,7 +502,10 @@ export class UploadsService {
 
     const files = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
 
-    const totalBytes = files.reduce((sum, f) => sum + Number(f.fileSizeBytes), 0);
+    const totalBytes = files.reduce(
+      (sum, f) => sum + Number(f.fileSizeBytes),
+      0,
+    );
 
     await this.tempFileRepo.deleteByTempDocumentId(tempDocumentId);
 
@@ -462,7 +513,10 @@ export class UploadsService {
       try {
         await this.deleteS3File(file.fileUrl);
       } catch (e) {
-        this.logger.error(`temp file S3 삭제 실패 (fileId=${file.id})`, e instanceof Error ? e.stack : String(e));
+        this.logger.error(
+          `temp file S3 삭제 실패 (fileId=${file.id})`,
+          e instanceof Error ? e.stack : String(e),
+        );
       }
     }
 
@@ -470,7 +524,10 @@ export class UploadsService {
       try {
         await this.usersService.subtractStorageUsedBytes(userId, totalBytes);
       } catch (e) {
-        this.logger.error(`storage_used_bytes 차감 실패 (userId=${userId})`, e instanceof Error ? e.stack : String(e));
+        this.logger.error(
+          `storage_used_bytes 차감 실패 (userId=${userId})`,
+          e instanceof Error ? e.stack : String(e),
+        );
       }
     }
   }
