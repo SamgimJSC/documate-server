@@ -10,6 +10,7 @@ import { AiStatus } from '../global/constants/aiStatus.enum';
 import { OCR_QUEUE_KEY } from '../redis/redis.const';
 import { UploadTarget } from '../global/constants/uploadTarget.enum';
 import { buildUploadKey } from './utils/buildUploadKey';
+import { decodeOriginalFileName } from './utils/decodeOriginalFileName';
 import { UploadedFileResult } from './types/uploadedFileResult.type';
 import {
   ALLOWED_MIME_TYPES,
@@ -33,6 +34,7 @@ import { UsersService } from '../users/users.service';
 export interface TempFileItem {
   id: string;
   fileUrl: string;
+  fileName: string | null;
   pageNo: number;
   fileSizeBytes: string;
 }
@@ -100,9 +102,10 @@ export class UploadsService {
       });
     }
 
-    const dotIndex = file.originalname.lastIndexOf('.');
-    const ext =
-      dotIndex !== -1 ? file.originalname.slice(dotIndex).toLowerCase() : '';
+    const originalName = decodeOriginalFileName(file.originalname);
+
+    const dotIndex = originalName.lastIndexOf('.');
+    const ext = dotIndex !== -1 ? originalName.slice(dotIndex).toLowerCase() : '';
     if (!ALLOWED_EXTENSIONS.has(ext)) {
       throw new EBadRequestException({
         message: '허용되지 않는 파일 확장자입니다.',
@@ -110,7 +113,7 @@ export class UploadsService {
       });
     }
 
-    const fileKey = buildUploadKey(userId, targetType, file.originalname);
+    const fileKey = buildUploadKey(userId, targetType, originalName);
 
     await this.s3.send(
       new PutObjectCommand({
@@ -128,7 +131,7 @@ export class UploadsService {
     return {
       fileUrl,
       fileKey,
-      fileName: file.originalname,
+      fileName: originalName,
       fileType: MIME_TO_FILE_TYPE[file.mimetype],
       fileSizeBytes: String(file.size),
       mimeType: file.mimetype,
@@ -165,9 +168,10 @@ export class UploadsService {
       });
     }
 
-    const dotIndex = file.originalname.lastIndexOf('.');
-    const ext =
-      dotIndex !== -1 ? file.originalname.slice(dotIndex).toLowerCase() : '';
+    const originalName = decodeOriginalFileName(file.originalname);
+
+    const dotIndex = originalName.lastIndexOf('.');
+    const ext = dotIndex !== -1 ? originalName.slice(dotIndex).toLowerCase() : '';
     if (!IMAGE_ONLY_EXTENSIONS.has(ext)) {
       throw new EBadRequestException({
         message: 'JPG, PNG 이미지만 업로드할 수 있습니다.',
@@ -209,11 +213,7 @@ export class UploadsService {
       });
     }
 
-    const fileKey = buildUploadKey(
-      userId,
-      UploadTarget.TEMP,
-      file.originalname,
-    );
+    const fileKey = buildUploadKey(userId, UploadTarget.TEMP, originalName);
     await this.s3.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -228,6 +228,7 @@ export class UploadsService {
       await this.tempFileRepo.insert({
         tempDocumentId,
         fileUrl,
+        fileName: originalName,
         pageNo,
         fileSizeBytes: String(file.size),
       });
@@ -251,6 +252,7 @@ export class UploadsService {
       files: allFiles.map((f) => ({
         id: f.id,
         fileUrl: f.fileUrl,
+        fileName: f.fileName,
         pageNo: f.pageNo,
         fileSizeBytes: f.fileSizeBytes,
       })),
@@ -267,6 +269,7 @@ export class UploadsService {
       files: (doc.tempFiles ?? []).map((f) => ({
         id: f.id,
         fileUrl: f.fileUrl,
+        fileName: f.fileName,
         pageNo: f.pageNo,
         fileSizeBytes: f.fileSizeBytes,
       })),
@@ -300,6 +303,7 @@ export class UploadsService {
       files: files.map((f) => ({
         id: f.id,
         fileUrl: f.fileUrl,
+        fileName: f.fileName,
         pageNo: f.pageNo,
         fileSizeBytes: f.fileSizeBytes,
       })),
@@ -349,6 +353,7 @@ export class UploadsService {
       files: allFiles.map((f) => ({
         id: f.id,
         fileUrl: f.fileUrl,
+        fileName: f.fileName,
         pageNo: f.pageNo,
         fileSizeBytes: f.fileSizeBytes,
       })),
@@ -476,6 +481,7 @@ export class UploadsService {
       files: allFiles.map((f) => ({
         id: f.id,
         fileUrl: f.fileUrl,
+        fileName: f.fileName,
         pageNo: f.pageNo,
         fileSizeBytes: f.fileSizeBytes,
       })),

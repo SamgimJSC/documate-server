@@ -23,6 +23,9 @@ export class TempFile {
   @Column({ name: 'file_url', type: 'varchar', length: 500 })
   fileUrl: string;
 
+  @Column({ name: 'file_name', type: 'varchar', length: 255, nullable: true })
+  fileName: string | null;
+
   @Column({ name: 'page_no', type: 'smallint' })
   pageNo: number;
 
