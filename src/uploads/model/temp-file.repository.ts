@@ -14,6 +14,7 @@ export class TypeOrmTempFileRepository implements TempFileRepository {
   async insert(input: {
     tempDocumentId: string;
     fileUrl: string;
+    fileName: string | null;
     pageNo: number;
     fileSizeBytes: string;
   }): Promise<TempFile> {

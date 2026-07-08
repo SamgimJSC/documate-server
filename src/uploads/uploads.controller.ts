@@ -36,6 +36,17 @@ export class UploadsController {
     return this.uploadsService.getTempDocumentList(req.user.userId);
   }
 
+  @Get(':tempDocumentId')
+  getTempDocumentStatus(
+    @Req() req: any,
+    @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
+  ) {
+    return this.uploadsService.getTempDocumentStatus(
+      req.user.userId,
+      tempDocumentId,
+    );
+  }
+
   @Post(':tempDocumentId')
   @UseInterceptors(
     FileInterceptor('file', {

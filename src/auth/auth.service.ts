@@ -28,6 +28,9 @@ import { BiometricType } from '../global/constants/biometricType.enum';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { Platform } from '../global/constants/platform.enum';
 import { PinLoginDto } from './dto/pinLogin.dto';
+import { VerifyPasswordDto } from './dto/verifyPassword.dto';
+import { UpdatePasswordDto } from './dto/updatePassword.dto';
+import { rPassword } from '../global/reg';
 import { BiometricEnableDto } from './dto/biometricEnable.dto';
 import { BiometricChallengeDto } from './dto/biometricChallenge.dto';
 import { BiometricVerifyDto } from './dto/biometricVerify.dto';
@@ -223,8 +226,87 @@ export class AuthService {
     await this.authTokenRepository.deleteByUserId(user.userId);
   }
 
+  async verifyPassword(userId: string, dto: VerifyPasswordDto) {
+    const user = await this.usersService.getOneUser(userId);
+
+    if (typeof dto.password !== 'string' || !dto.password) {
+      throw new EUnauthorizedException({
+        message: 'Invalid password.',
+        errorCode: ERROR_CODE.INVALID_PASSWORD,
+      });
+    }
+
+    const isValid = await bcrypt.compare(dto.password, user.password);
+
+    if (!isValid) {
+      throw new EUnauthorizedException({
+        message: 'Invalid password.',
+        errorCode: ERROR_CODE.INVALID_PASSWORD,
+      });
+    }
+
+    return { valid: true };
+  }
+
+  async updatePassword(userId: string, dto: UpdatePasswordDto) {
+    const user = await this.usersService.getOneUser(userId);
+
+    if (typeof dto.current_password !== 'string' || !dto.current_password) {
+      throw new EUnauthorizedException({
+        message: 'Invalid password.',
+        errorCode: ERROR_CODE.INVALID_PASSWORD,
+      });
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      dto.current_password,
+      user.password,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new EUnauthorizedException({
+        message: 'Invalid password.',
+        errorCode: ERROR_CODE.INVALID_PASSWORD,
+      });
+    }
+
+    if (
+      typeof dto.new_password !== 'string' ||
+      !rPassword.test(dto.new_password)
+    ) {
+      throw new EBadRequestException({
+        message:
+          'New password must contain at least one letter and one number and be 8-20 characters long.',
+        errorCode: ERROR_CODE.INVALID_NEW_PASSWORD_FORMAT,
+      });
+    }
+
+    const isSamePassword = await bcrypt.compare(
+      dto.new_password,
+      user.password,
+    );
+
+    if (isSamePassword) {
+      throw new EBadRequestException({
+        message: 'New password must be different from current password.',
+        errorCode: ERROR_CODE.INVALID_NEW_PASSWORD_FORMAT,
+      });
+    }
+
+    const hashedPw = await bcrypt.hash(dto.new_password, 10);
+    await this.usersService.updateUser(userId, { password: hashedPw });
+
+    return { success: true };
+  }
+
   async login(loginDto: LoginDto) {
-    const { email, password, deviceToken, platform, stayLoggedIn = false } = loginDto;
+    const {
+      email,
+      password,
+      deviceToken,
+      platform,
+      stayLoggedIn = false,
+    } = loginDto;
 
     const [dbUser] = await this.usersService.getUsers({ email });
 
@@ -244,7 +326,10 @@ export class AuthService {
         errorCode: ERROR_CODE.INVALID_PASSWORD,
       });
 
-    const { accessToken, refreshToken } = this.signTokens(dbUser.userId, stayLoggedIn);
+    const { accessToken, refreshToken } = this.signTokens(
+      dbUser.userId,
+      stayLoggedIn,
+    );
 
     await this.authTokenRepository.deleteByUserId(dbUser.userId);
     await this.authTokenRepository.createToken({
@@ -262,7 +347,13 @@ export class AuthService {
   }
 
   async loginWithPin(pinLoginDto: PinLoginDto) {
-    const { email, pinNumber, deviceToken, platform, stayLoggedIn = false } = pinLoginDto;
+    const {
+      email,
+      pinNumber,
+      deviceToken,
+      platform,
+      stayLoggedIn = false,
+    } = pinLoginDto;
 
     // email로 유저를 특정하기 때문에 같은 PIN을 가진 다른 유저로 로그인되는 버그 없음
     const [dbUser] = await this.usersService.getUsers({ email });
@@ -299,7 +390,10 @@ export class AuthService {
 
     await this.usersService.resetPinFailedCount(dbUser.userId);
 
-    const { accessToken, refreshToken } = this.signTokens(dbUser.userId, stayLoggedIn);
+    const { accessToken, refreshToken } = this.signTokens(
+      dbUser.userId,
+      stayLoggedIn,
+    );
 
     await this.authTokenRepository.deleteByUserId(dbUser.userId);
     await this.authTokenRepository.createToken({
@@ -365,7 +459,9 @@ export class AuthService {
           errorCode: ERROR_CODE.BIOMETRIC_TYPE_REQUIRED,
         });
       }
-      if (!Object.values(BiometricType).includes(biometric_type as BiometricType)) {
+      if (
+        !Object.values(BiometricType).includes(biometric_type as BiometricType)
+      ) {
         throw new EBadRequestException({
           message: '지원하지 않는 생체인증 방식입니다.',
           errorCode: ERROR_CODE.BIOMETRIC_TYPE_INVALID,
@@ -428,7 +524,8 @@ export class AuthService {
   async verifyBiometricChallenge(dto: BiometricVerifyDto, res: any) {
     const { challenge_id, signature } = dto;
 
-    const record = await this.biometricChallengeRepository.findByChallengeId(challenge_id);
+    const record =
+      await this.biometricChallengeRepository.findByChallengeId(challenge_id);
 
     if (!record || record.isUsed || this.isExpired(record.expiresAt)) {
       throw new EUnauthorizedException({

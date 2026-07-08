@@ -4,6 +4,7 @@ export interface TempFileRepository {
   insert(input: {
     tempDocumentId: string;
     fileUrl: string;
+    fileName: string | null;
     pageNo: number;
     fileSizeBytes: string;
   }): Promise<TempFile>;

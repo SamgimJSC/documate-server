@@ -20,6 +20,7 @@ import { UpdateUserDto } from './dto/updateUser.dto';
 import { UpdateUserSettingsDto } from './dto/updateUserSettings.dto';
 import { UpdatePinDto } from './dto/updatePin.dto';
 import { VerifyPinDto } from './dto/verifyPin.dto';
+import { UpdateNicknameDto } from './dto/updateNickname.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { User } from './entities/user.entity';
@@ -41,6 +42,11 @@ export class UsersController {
   @Get('me')
   getMe(@DecoUser() user: User) {
     return this.usersService.getOneUser(user.userId);
+  }
+
+  @Patch('me/nickname')
+  updateMyNickname(@DecoUser() user: ReqUser, @Body() dto: UpdateNicknameDto) {
+    return this.usersService.updateMyNickname(user.userId, dto);
   }
 
   // ====================================================================
