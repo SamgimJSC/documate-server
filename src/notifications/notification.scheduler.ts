@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThanOrEqual, Repository } from 'typeorm';
@@ -25,7 +30,7 @@ import { NodeMailer } from '../auth/providors/nodeMailer';
   4) document_alerts.is_sent=true 로 발송 완료 표시
 */
 @Injectable()
-export class NotificationScheduler {
+export class NotificationScheduler implements OnApplicationBootstrap {
   private readonly logger = new Logger(NotificationScheduler.name);
 
   constructor(
@@ -42,6 +47,18 @@ export class NotificationScheduler {
     private readonly fcmService: FcmService,
     private readonly nodeMailer: NodeMailer,
   ) {}
+
+  /*
+    서버 기동 시 1회 캐치업 실행
+    - 프로세스가 9시 크론 시각에 떠있지 않았다면(재배포, 슬립 등) 그날 알림이
+      다음날 크론까지 밀리는 문제가 있었음 (재발 사례 확인됨)
+    - 재시작될 때마다 즉시 한 번 밀린 알림을 확인해서, 최대 지연을
+      "프로세스가 다시 떠서 크론이 정상적으로 돌 때까지"로 줄임
+  */
+  async onApplicationBootstrap(): Promise<void> {
+    this.logger.log('서버 기동 — 밀린 알림 캐치업 확인');
+    await this.dispatchDueAlerts();
+  }
 
   /*
     매일 오전 9시(KST)에 자동 실행
