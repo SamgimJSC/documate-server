@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { UserRole } from '../../global/constants/userRole.enum';
 import { UserPlan } from '../../global/constants/userPlan.enum';
 
@@ -16,6 +17,7 @@ export class User {
   @Column({ name: 'email', type: 'varchar', length: 255, unique: true })
   email: string;
 
+  @Exclude()
   @Column({ name: 'password', type: 'varchar', length: 255 })
   password: string;
 

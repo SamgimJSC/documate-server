@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { UploadsModule } from '../uploads/uploads.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { UsersModule } from '../users/users.module';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 import { DocumentCategory } from './entities/document-category.entity';
@@ -23,6 +25,8 @@ import { TypeOrmDocumentAlertRepository } from './model/document-alert.repositor
   imports: [
     AuthModule,
     UploadsModule,
+    NotificationsModule,
+    UsersModule,
     TypeOrmModule.forFeature([
       DocumentCategory,
       Document,

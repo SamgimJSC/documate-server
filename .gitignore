@@ -446,3 +446,4 @@ $RECYCLE.BIN/
 firebase-service-account.json
 
 .vscode
+/local

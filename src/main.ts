@@ -1,6 +1,6 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { TypedConfigService } from './configs/typedConfig.service';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import { LoggerInterceptor } from './global/interceptors/logger.interceptor';
@@ -35,6 +35,7 @@ async function bootstrap() {
     // app.get(ServiceLogInterceptor),
     // app.get(TokenRefreshInterceptor),
     new ResponseInterceptor(),
+    new ClassSerializerInterceptor(app.get(Reflector)),
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());

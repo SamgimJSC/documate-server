@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { DataSource } from 'typeorm';
 import {
   DOCUMENT_DEFAULT_PAGE,
@@ -15,6 +16,8 @@ import { CreateDocumentDto } from './dto/createDocument.dto';
 import { UpdateDocumentDto } from './dto/updateDocument.dto';
 import { GetDocumentsQueryDto } from './dto/getDocumentsQuery.dto';
 import { ToggleFavoriteDto } from './dto/toggleFavorite.dto';
+import { UpdateDocumentLockDto } from './dto/updateDocumentLock.dto';
+import { UnlockDocumentDto } from './dto/unlockDocument.dto';
 import { AddDocumentTagDto } from './dto/addDocumentTag.dto';
 import { ReorderDocumentFilesDto } from './dto/reorderDocumentFiles.dto';
 import { CreateAlertRequestDto } from './dto/createAlertRequest.dto';
@@ -38,10 +41,17 @@ import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { PDFDocument } from 'pdf-lib';
 import axios from 'axios';
 import { UploadsService } from '../uploads/uploads.service';
+import { NotificationScheduler } from '../notifications/notification.scheduler';
+import { UsersService } from '../users/users.service';
+import { EUnauthorizedException } from '../global/exceptions/EUnauthorizedException';
+import { DocumentUnlockPayload } from './types/documentUnlockPayload.type';
+
+const DOCUMENT_UNLOCK_TOKEN_TTL_SECONDS = 600;
 
 @Injectable()
 export class DocumentsService {
   constructor(
+    private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly documentRepository: TypeOrmDocumentRepository,
     private readonly documentCategoryRepository: TypeOrmDocumentCategoryRepository,
@@ -51,6 +61,8 @@ export class DocumentsService {
     private readonly documentActivityRepository: TypeOrmDocumentActivityRepository,
     private readonly documentAlertRepository: TypeOrmDocumentAlertRepository,
     private readonly uploadsService: UploadsService,
+    private readonly notificationScheduler: NotificationScheduler,
+    private readonly usersService: UsersService,
   ) {}
 
   async getCategories(): Promise<DocumentCategory[]> {
@@ -131,10 +143,18 @@ export class DocumentsService {
       );
     const page = query.page ?? DOCUMENT_DEFAULT_PAGE;
     const limit = query.limit ?? DOCUMENT_DEFAULT_LIMIT;
-    return { items, total, page, limit, hasNext: total > page * limit };
+    // 목록에서는 문서별 언락 토큰을 받지 않으므로, 잠긴 문서는 항상 민감 필드를 가림
+    const redactedItems = items.map((item) =>
+      item.isLocked ? this.redactLockedDocument(item) : item,
+    );
+    return { items: redactedItems, total, page, limit, hasNext: total > page * limit };
   }
 
-  async getDocumentById(documentId: string, userId: string): Promise<Document> {
+  async getDocumentById(
+    documentId: string,
+    userId: string,
+    unlockToken?: string,
+  ): Promise<Document> {
     const document = await this.documentRepository.findByDocumentIdAndUserId(
       documentId,
       userId,
@@ -146,7 +166,76 @@ export class DocumentsService {
         message: '존재하지 않는 문서입니다.',
       });
     }
+
+    if (document.isLocked && !this.hasValidUnlockToken(unlockToken, documentId, userId)) {
+      return this.redactLockedDocument(document);
+    }
+
     return document;
+  }
+
+  /*
+    잠긴 문서 열람용 단기 언락 토큰 발급
+    - PIN 검증 성공 시에만 발급되며, 해당 문서/유저에만 한정되고 10분 뒤 만료됨
+    - 로컬 스토리지 등 영구 저장소에 두지 않고 프론트 메모리에만 보관하는 것을 전제로 함
+  */
+  async unlockDocument(
+    documentId: string,
+    userId: string,
+    dto: UnlockDocumentDto,
+  ): Promise<{ unlockToken: string; expiresIn: number }> {
+    const document = await this.documentRepository.findByDocumentIdAndUserId(
+      documentId,
+      userId,
+    );
+    if (!document) {
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
+        message: '존재하지 않는 문서입니다.',
+      });
+    }
+
+    await this.usersService.verifyPin(userId, dto.pinNumber);
+
+    const payload: DocumentUnlockPayload = {
+      sub: userId,
+      documentId,
+      purpose: 'document-unlock',
+    };
+    const unlockToken = this.jwtService.sign(payload, {
+      expiresIn: DOCUMENT_UNLOCK_TOKEN_TTL_SECONDS,
+    });
+
+    return { unlockToken, expiresIn: DOCUMENT_UNLOCK_TOKEN_TTL_SECONDS };
+  }
+
+  private hasValidUnlockToken(
+    token: string | undefined,
+    documentId: string,
+    userId: string,
+  ): boolean {
+    if (!token) return false;
+
+    try {
+      const payload = this.jwtService.verify<DocumentUnlockPayload>(token);
+      return (
+        payload.purpose === 'document-unlock' &&
+        payload.documentId === documentId &&
+        payload.sub === userId
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private redactLockedDocument(document: Document): Document {
+    return {
+      ...document,
+      ocrText: null,
+      extractedData: null,
+      aiConfidence: null,
+      documentFiles: [],
+    };
   }
 
   async updateDocument(
@@ -203,6 +292,45 @@ export class DocumentsService {
       });
     }
     return document;
+  }
+
+  /*
+    문서 잠금 설정 변경
+    - PIN 검증과 isLocked 업데이트를 한 요청 안에서 원자적으로 처리
+    - PIN 검증을 통과하지 못하면 업데이트 로직에 도달하지 않으므로,
+      검증을 우회해서 잠금 상태만 바꾸는 것이 불가능함
+  */
+  async updateLock(
+    documentId: string,
+    userId: string,
+    dto: UpdateDocumentLockDto,
+  ): Promise<Document> {
+    const document = await this.documentRepository.findByDocumentIdAndUserId(
+      documentId,
+      userId,
+    );
+    if (!document) {
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
+        message: '존재하지 않는 문서입니다.',
+      });
+    }
+
+    await this.usersService.verifyPin(userId, dto.pinNumber);
+
+    const updated = await this.documentRepository.setLockByUserId(
+      documentId,
+      userId,
+      dto.isLocked,
+    );
+    if (!updated) {
+      throw new ENotFoundException({
+        errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
+        message: '존재하지 않는 문서입니다.',
+      });
+    }
+
+    return updated;
   }
 
   async deleteDocument(documentId: string, userId: string): Promise<null> {
@@ -365,6 +493,9 @@ export class DocumentsService {
       description: dto.offsetType,
     });
 
+    // notifyDate가 오늘이거나 이미 지난 경우, 다음날 크론까지 기다리지 않고 즉시 발송
+    await this.notificationScheduler.dispatchIfDueNow(alert.alertId);
+
     return alert;
   }
 
@@ -424,9 +555,15 @@ export class DocumentsService {
       }
     }
 
+    // notifyDate가 바뀌면 예전 날짜 기준으로 이미 발송 완료된 상태(is_sent)를 초기화
+    // (안 그러면 새 날짜가 되어도 발송 완료 처리 때문에 다시는 안 나감)
+    const isNotifyDateChanged =
+      dto.notifyDate !== undefined &&
+      new Date(dto.notifyDate).getTime() !== new Date(alert.notifyDate).getTime();
+
     const updated = await this.documentAlertRepository.updateAlert(
       alertId,
-      dto,
+      isNotifyDateChanged ? { ...dto, isSent: false, sentAt: null } : dto,
     );
     if (!updated) {
       throw new ENotFoundException({
@@ -434,6 +571,10 @@ export class DocumentsService {
         message: '알림을 찾을 수 없습니다.',
       });
     }
+
+    // notifyDate가 오늘이거나 이미 지난 경우, 다음날 크론까지 기다리지 않고 즉시 발송
+    await this.notificationScheduler.dispatchIfDueNow(alertId);
+
     return updated;
   }
 
@@ -557,12 +698,23 @@ export class DocumentsService {
     return result;
   }
 
-  async generatePdf(documentId: string, userId: string): Promise<Buffer> {
+  async generatePdf(
+    documentId: string,
+    userId: string,
+    unlockToken?: string,
+  ): Promise<Buffer> {
     const document = await this.documentRepository.findByDocumentIdAndUserId(documentId, userId, true);
     if (!document) {
       throw new ENotFoundException({
         errorCode: ERROR_CODE.DOCUMENT_NOT_FOUND,
         message: '존재하지 않는 문서입니다.',
+      });
+    }
+
+    if (document.isLocked && !this.hasValidUnlockToken(unlockToken, documentId, userId)) {
+      throw new EUnauthorizedException({
+        errorCode: ERROR_CODE.DOCUMENT_LOCKED,
+        message: '문서 잠금을 먼저 해제해주세요.',
       });
     }
 

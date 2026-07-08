@@ -5,6 +5,8 @@ import {
   Patch,
   Delete,
   Body,
+  HttpCode,
+  HttpStatus,
   Param,
   Query,
   Req,
@@ -21,10 +23,14 @@ import { UpdateDocumentDto } from './dto/updateDocument.dto';
 import { UpdateDocumentCategoryDto } from './dto/updateDocumentCategory.dto';
 import { GetDocumentsQueryDto } from './dto/getDocumentsQuery.dto';
 import { ToggleFavoriteDto } from './dto/toggleFavorite.dto';
+import { UpdateDocumentLockDto } from './dto/updateDocumentLock.dto';
+import { UnlockDocumentDto } from './dto/unlockDocument.dto';
 import { AddDocumentTagDto } from './dto/addDocumentTag.dto';
 import { ReorderDocumentFilesDto } from './dto/reorderDocumentFiles.dto';
 import { CreateAlertRequestDto } from './dto/createAlertRequest.dto';
 import { UpdateAlertRequestDto } from './dto/updateAlertRequest.dto';
+
+const DOCUMENT_UNLOCK_COOKIE = 'X-Document-Unlock-Token';
 
 @UseGuards(JwtAuthGuard)
 @Controller('documents')
@@ -68,7 +74,32 @@ export class DocumentsController {
     @Req() req: any,
     @Param('documentId', ParseUUIDPipe) documentId: string,
   ) {
-    return this.documentsService.getDocumentById(documentId, req.user.userId);
+    return this.documentsService.getDocumentById(
+      documentId,
+      req.user.userId,
+      req.cookies?.[DOCUMENT_UNLOCK_COOKIE],
+    );
+  }
+
+  @Post(':documentId/unlock')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unlockDocument(
+    @Req() req: any,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Body() dto: UnlockDocumentDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { unlockToken, expiresIn } = await this.documentsService.unlockDocument(
+      documentId,
+      req.user.userId,
+      dto,
+    );
+    res.cookie(DOCUMENT_UNLOCK_COOKIE, unlockToken, {
+      httpOnly: true,
+      secure: false, // production 에서는 true로 하기
+      sameSite: 'lax',
+      maxAge: expiresIn * 1000,
+    });
   }
 
   @Patch(':documentId')
@@ -95,6 +126,15 @@ export class DocumentsController {
       req.user.userId,
       dto,
     );
+  }
+
+  @Patch(':documentId/lock')
+  updateLock(
+    @Req() req: any,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Body() dto: UpdateDocumentLockDto,
+  ) {
+    return this.documentsService.updateLock(documentId, req.user.userId, dto);
   }
 
   @Delete(':documentId')
@@ -151,7 +191,11 @@ export class DocumentsController {
     @Param('documentId', ParseUUIDPipe) documentId: string,
     @Res() res: Response,
   ) {
-    const pdf = await this.documentsService.generatePdf(documentId, req.user.userId);
+    const pdf = await this.documentsService.generatePdf(
+      documentId,
+      req.user.userId,
+      req.cookies?.[DOCUMENT_UNLOCK_COOKIE],
+    );
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${documentId}.pdf"`);
     res.send(pdf);

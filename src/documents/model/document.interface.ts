@@ -31,6 +31,11 @@ export interface DocumentRepository {
     userId: string,
     isFavorite: boolean,
   ): Promise<Document | null>;
+  setLockByUserId(
+    documentId: string,
+    userId: string,
+    isLocked: boolean,
+  ): Promise<Document | null>;
   findAiStatusByDocumentId(
     documentId: string,
     userId: string,

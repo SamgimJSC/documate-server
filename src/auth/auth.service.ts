@@ -7,15 +7,16 @@ import { type EmailVerificationRepository } from './model/email-verification.int
 import { EConflictException } from '../global/exceptions/EConflictException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { TypeOrmEmailVerificationRepository } from './model/email-verification.repository';
 import { SendEmailVerificationDto } from './dto/sendEmailVerification.dto';
-import crypto from 'crypto';
 import { NodeMailer } from './providors/nodeMailer';
 import { EServiceUnavailableException } from '../global/exceptions/EServiceUnavailableException';
 import { VerifyEmailVerificationDto } from './dto/verifyEmailVerification.dto';
 import { LoginDto } from './dto/login.dto';
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { EUnauthorizedException } from '../global/exceptions/EUnauthorizedException';
+import { EBadRequestException } from '../global/exceptions/EBadRequestException';
 import { JwtPayload } from './types/jwtPayload.type';
 import { JwtService } from '@nestjs/jwt';
 import { TypedConfigService } from '../configs/typedConfig.service';
@@ -23,13 +24,19 @@ import { type AuthTokenRepository } from './model/auth-token.interface';
 import { TypeOrmAuthTokenRepository } from './model/auth-token.repository';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { VerificationPurpose } from '../global/constants/verificationPurpose.enum';
+import { BiometricType } from '../global/constants/biometricType.enum';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { Platform } from '../global/constants/platform.enum';
 import { PinLoginDto } from './dto/pinLogin.dto';
 import { VerifyPasswordDto } from './dto/verifyPassword.dto';
 import { UpdatePasswordDto } from './dto/updatePassword.dto';
-import { EBadRequestException } from '../global/exceptions/EBadRequestException';
 import { rPassword } from '../global/reg';
+import { BiometricEnableDto } from './dto/biometricEnable.dto';
+import { BiometricChallengeDto } from './dto/biometricChallenge.dto';
+import { BiometricVerifyDto } from './dto/biometricVerify.dto';
+import { type BiometricChallengeRepository } from './model/biometric-challenge.interface';
+import { TypeOrmBiometricChallengeRepository } from './model/biometric-challenge.repository';
+import { PIN_MAX_FAILED_ATTEMPTS } from '../global/constants/pin.const';
 
 @Injectable()
 export class AuthService {
@@ -38,6 +45,8 @@ export class AuthService {
     private readonly emailVerificationRepository: EmailVerificationRepository,
     @Inject(TypeOrmAuthTokenRepository)
     private readonly authTokenRepository: AuthTokenRepository,
+    @Inject(TypeOrmBiometricChallengeRepository)
+    private readonly biometricChallengeRepository: BiometricChallengeRepository,
     private readonly usersService: UsersService,
     private readonly nodeMailer: NodeMailer,
     private readonly jwtService: JwtService,
@@ -363,8 +372,7 @@ export class AuthService {
         errorCode: ERROR_CODE.PIN_NOT_SET,
       });
 
-    const PIN_MAX_FAILED = 5;
-    if (security.pinFailedCount >= PIN_MAX_FAILED)
+    if (security.pinFailedCount >= PIN_MAX_FAILED_ATTEMPTS)
       throw new EUnauthorizedException({
         message: 'PIN 입력 횟수를 초과했습니다. 이메일 로그인을 이용해주세요.',
         errorCode: ERROR_CODE.PIN_LOCKED,
@@ -439,6 +447,137 @@ export class AuthService {
       });
       await this.deviceTokenRepo.save(newToken);
     }
+  }
+
+  async setBiometric(userId: string, dto: BiometricEnableDto) {
+    const { enabled, biometric_type, public_key } = dto;
+
+    if (enabled) {
+      if (!biometric_type) {
+        throw new EBadRequestException({
+          message: '생체인증 방식은 필수입니다.',
+          errorCode: ERROR_CODE.BIOMETRIC_TYPE_REQUIRED,
+        });
+      }
+      if (
+        !Object.values(BiometricType).includes(biometric_type as BiometricType)
+      ) {
+        throw new EBadRequestException({
+          message: '지원하지 않는 생체인증 방식입니다.',
+          errorCode: ERROR_CODE.BIOMETRIC_TYPE_INVALID,
+        });
+      }
+      if (!public_key) {
+        throw new EBadRequestException({
+          message: '공개키는 필수입니다.',
+          errorCode: ERROR_CODE.PUBLIC_KEY_REQUIRED,
+        });
+      }
+    }
+
+    const updated = await this.usersService.updateBiometric(
+      userId,
+      enabled,
+      enabled ? (biometric_type as BiometricType) : null,
+      enabled ? public_key! : null,
+    );
+
+    return {
+      success: true,
+      is_biometric_enabled: updated.biometricEnabled,
+      biometric_type: updated.biometricType,
+    };
+  }
+
+  async createBiometricChallenge(dto: BiometricChallengeDto) {
+    const [user] = await this.usersService.getUsers({ email: dto.email });
+
+    if (!user) {
+      throw new ENotFoundException({
+        message: '존재하지 않는 계정입니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+    }
+
+    const security = await this.usersService.getUserSecurity(user.userId);
+
+    if (!security?.biometricEnabled) {
+      throw new EBadRequestException({
+        message: '생체인증이 등록되지 않은 계정입니다.',
+        errorCode: ERROR_CODE.BIOMETRIC_NOT_ENABLED,
+      });
+    }
+
+    const challenge = crypto.randomBytes(32).toString('base64');
+    const record = await this.biometricChallengeRepository.createChallenge(
+      user.userId,
+      challenge,
+      this.getExpiresAt(5),
+    );
+
+    return {
+      challenge: record.challenge,
+      challenge_id: record.challengeId,
+    };
+  }
+
+  async verifyBiometricChallenge(dto: BiometricVerifyDto, res: any) {
+    const { challenge_id, signature } = dto;
+
+    const record =
+      await this.biometricChallengeRepository.findByChallengeId(challenge_id);
+
+    if (!record || record.isUsed || this.isExpired(record.expiresAt)) {
+      throw new EUnauthorizedException({
+        message: '생체인증에 실패했습니다.',
+        errorCode: ERROR_CODE.BIOMETRIC_AUTH_FAILED,
+      });
+    }
+
+    const security = await this.usersService.getUserSecurity(record.userId);
+
+    if (!security?.publicKey) {
+      throw new EUnauthorizedException({
+        message: '생체인증에 실패했습니다.',
+        errorCode: ERROR_CODE.BIOMETRIC_AUTH_FAILED,
+      });
+    }
+
+    let isValid = false;
+    try {
+      isValid = crypto
+        .createVerify('SHA256')
+        .update(record.challenge)
+        .verify(security.publicKey, signature, 'base64');
+    } catch {
+      // 서명 형식이 잘못된 경우도 실패로 처리
+    }
+
+    if (!isValid) {
+      throw new EUnauthorizedException({
+        message: '생체인증에 실패했습니다.',
+        errorCode: ERROR_CODE.BIOMETRIC_AUTH_FAILED,
+      });
+    }
+
+    await this.biometricChallengeRepository.markAsUsed(challenge_id);
+
+    const payload: JwtPayload = { sub: record.userId };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
+
+    await this.authTokenRepository.deleteByUserId(record.userId);
+    await this.authTokenRepository.createToken({
+      userId: record.userId,
+      accessToken,
+      refreshToken,
+    });
+
+    res.cookie('X-Access-Token', accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+    });
   }
 
   createVerificationCode() {

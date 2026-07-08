@@ -162,6 +162,18 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
     return this.repo.save(document);
   }
 
+  async setLockByUserId(
+    documentId: string,
+    userId: string,
+    isLocked: boolean,
+  ): Promise<Document | null> {
+    const document = await this.findByDocumentIdAndUserId(documentId, userId);
+    if (!document) return null;
+
+    document.isLocked = isLocked;
+    return this.repo.save(document);
+  }
+
   async findAiStatusByDocumentId(
     documentId: string,
     userId: string,
