@@ -21,6 +21,7 @@ import * as bcrypt from 'bcrypt';
 import { rNickname } from '../global/reg';
 import type { BiometricType } from '../global/constants/biometricType.enum';
 import { PIN_MAX_FAILED_ATTEMPTS } from '../global/constants/pin.const';
+import { UserPlan } from '../global/constants/userPlan.enum';
 
 @Injectable()
 export class UsersService {
@@ -254,5 +255,18 @@ export class UsersService {
 
   async subtractStorageUsedBytes(userId: string, bytes: number) {
     await this.userRepo.decrementStorageUsedBytes(userId, bytes);
+  }
+
+  async updatePlanAndStorageQuota(userId: string, plan: UserPlan) {
+    const updated = await this.userRepo.updatePlanAndStorageQuota(userId, plan);
+
+    if (!updated) {
+      throw new ENotFoundException({
+        message: '사용자를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.USER_NOT_FOUND,
+      });
+    }
+
+    return updated;
   }
 }

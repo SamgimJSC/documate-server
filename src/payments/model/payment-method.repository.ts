@@ -28,7 +28,10 @@ export class TypeOrmPaymentMethodRepository implements PaymentMethodRepository {
 
   async setDefault(userId: string, methodId: string): Promise<boolean> {
     await this.repo.update({ userId }, { isDefault: false });
-    const result = await this.repo.update({ methodId }, { isDefault: true });
+    const result = await this.repo.update(
+      { userId, methodId },
+      { isDefault: true },
+    );
     return (result.affected ?? 0) > 0;
   }
 

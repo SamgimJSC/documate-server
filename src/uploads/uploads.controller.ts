@@ -81,6 +81,17 @@ export class UploadsController {
     );
   }
 
+  @Delete(':tempDocumentId')
+  deleteTempDocument(
+    @Req() req: any,
+    @Param('tempDocumentId', ParseUUIDPipe) tempDocumentId: string,
+  ) {
+    return this.uploadsService.deleteTempDocument(
+      req.user.userId,
+      tempDocumentId,
+    );
+  }
+
   @Delete(':tempDocumentId/files')
   deleteAllTempFiles(
     @Req() req: any,

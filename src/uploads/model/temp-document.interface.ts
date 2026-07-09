@@ -7,4 +7,5 @@ export interface TempDocumentRepository {
   findByUserId(userId: string): Promise<TempDocument[]>;
   updateAiStatus(tempDocumentId: string, aiStatus: AiStatus): Promise<void>;
   deleteExpired(days: number): Promise<number>;
+  deleteById(tempDocumentId: string): Promise<void>;
 }
