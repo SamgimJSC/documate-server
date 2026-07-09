@@ -7,6 +7,7 @@ import {
   IsString,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -82,6 +83,11 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   KAKAOPAY_FAIL_URL: string;
+
+  @IsString()
+  @MinLength(32)
+  @IsNotEmpty()
+  PAYMENT_BILLING_KEY_SECRET: string;
 }
 
 export function validate(config: Record<string, unknown>) {

@@ -13,3 +13,5 @@ export const PRO_PLAN_AMOUNT: Record<BillingCycle, number> = {
 
 export const KAKAOPAY_DEFAULT_QUANTITY = 1;
 export const KAKAOPAY_TAX_FREE_AMOUNT = 0;
+
+export const BILLING_KEY_CRYPTO_VERSION = 'v1';

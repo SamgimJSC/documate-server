@@ -19,6 +19,8 @@ import { EBadRequestException } from '../global/exceptions/EBadRequestException'
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
+import { TypedConfigService } from '../configs/typedConfig.service';
+import { encryptBillingKey } from './utils/billing-key.crypto';
 
 @Injectable()
 export class PaymentsService {
@@ -28,6 +30,7 @@ export class PaymentsService {
     private readonly kakaoPayProvider: KakaoPayProvider,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly usersService: UsersService,
+    private readonly configService: TypedConfigService,
   ) {}
 
   async readyKakaoPayment(userId: string, dto: KakaoReadyDto) {
@@ -147,7 +150,10 @@ export class PaymentsService {
     const paymentMethod = await this.paymentMethodRepo.createMethod({
       userId: payment.userId,
       methodType: PaymentMethodType.KAKAOPAY,
-      billingKey: sid,
+      billingKey: encryptBillingKey(
+        sid,
+        this.configService.get('PAYMENT_BILLING_KEY_SECRET'),
+      ),
       displayName: KAKAOPAY_DISPLAY_NAME,
       isDefault: false,
     });
