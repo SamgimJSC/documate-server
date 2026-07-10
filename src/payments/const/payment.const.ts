@@ -4,6 +4,10 @@ export const KAKAOPAY_READY_PATH = '/online/v1/payment/ready';
 export const KAKAOPAY_APPROVE_PATH = '/online/v1/payment/approve';
 
 export const PRO_PLAN_ITEM_NAME = 'DocuMate PRO';
+export const KAKAOPAY_METHOD_CHANGE_ITEM_NAME =
+  'DocuMate payment method change';
+export const KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX =
+  '/method-change/approve';
 export const KAKAOPAY_DISPLAY_NAME = '카카오페이';
 
 export const PRO_PLAN_AMOUNT: Record<BillingCycle, number> = {

@@ -20,9 +20,20 @@ export class PaymentsController {
     return this.paymentsService.readyKakaoPayment(user.userId, dto);
   }
 
+  @Post('kakao/method-change/ready')
+  @UseGuards(JwtAuthGuard)
+  readyKakaoMethodChange(@DecoUser() user: ReqUser) {
+    return this.paymentsService.readyKakaoMethodChange(user.userId);
+  }
+
   @Get('kakao/approve')
   approveKakaoPayment(@Query() query: KakaoApproveQueryDto) {
     return this.paymentsService.approveKakaoPayment(query);
+  }
+
+  @Get('kakao/method-change/approve')
+  approveKakaoMethodChange(@Query() query: KakaoApproveQueryDto) {
+    return this.paymentsService.approveKakaoMethodChange(query);
   }
 
   @Get('kakao/cancel')

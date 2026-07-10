@@ -11,7 +11,12 @@ import {
   KakaoResultQueryDto,
 } from './dto/kakaoApproveQuery.dto';
 import { KakaoReadyDto } from './dto/kakaoReady.dto';
-import { KAKAOPAY_DISPLAY_NAME, PRO_PLAN_AMOUNT } from './const/payment.const';
+import {
+  KAKAOPAY_DISPLAY_NAME,
+  KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX,
+  KAKAOPAY_METHOD_CHANGE_ITEM_NAME,
+  PRO_PLAN_AMOUNT,
+} from './const/payment.const';
 import { KakaoPayProvider } from './providers/kakao-pay.provider';
 import { EServiceUnavailableException } from '../global/exceptions/EServiceUnavailableException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
@@ -94,6 +99,79 @@ export class PaymentsService {
 
       throw new EServiceUnavailableException({
         message: '카카오페이 결제 준비 요청에 실패했습니다.',
+        errorCode: ERROR_CODE.PAYMENT_READY_FAILED,
+      });
+    }
+  }
+
+  async readyKakaoMethodChange(userId: string) {
+    const subscription =
+      await this.subscriptionsService.getActiveSubscriptionByUserId(userId);
+    if (!subscription) {
+      throw new ENotFoundException({
+        message: '활성 구독을 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.SUBSCRIPTION_NOT_FOUND,
+      });
+    }
+
+    const amount = PRO_PLAN_AMOUNT[BillingCycle.MONTHLY];
+    const payment = await this.paymentRepo.createPayment({
+      userId,
+      subscriptionId: subscription.subscriptionId,
+      methodId: null,
+      tid: null,
+      amount,
+      status: PaymentStatus.READY,
+    });
+
+    try {
+      const ready = await this.kakaoPayProvider.readySubscription({
+        paymentId: payment.paymentId,
+        userId,
+        amount,
+        itemName: KAKAOPAY_METHOD_CHANGE_ITEM_NAME,
+        approvalUrl: this.buildMethodChangeApprovalUrl(),
+      });
+
+      const redirectUrl =
+        ready.next_redirect_app_url ??
+        ready.next_redirect_mobile_url ??
+        ready.next_redirect_pc_url ??
+        null;
+
+      if (!ready.tid || !redirectUrl) {
+        throw new Error('KakaoPay ready response missing tid or redirect URL.');
+      }
+
+      await this.paymentRepo.updatePayment(payment.paymentId, {
+        tid: ready.tid,
+        status: PaymentStatus.READY,
+      });
+
+      return {
+        paymentId: payment.paymentId,
+        subscriptionId: subscription.subscriptionId,
+        tid: ready.tid,
+        redirectUrl,
+        appRedirectUrl: ready.next_redirect_app_url ?? null,
+        mobileRedirectUrl: ready.next_redirect_mobile_url ?? null,
+        pcRedirectUrl: ready.next_redirect_pc_url ?? null,
+        status: PaymentStatus.READY,
+        billingCycle: subscription.billingCycle,
+        amount,
+      };
+    } catch (error) {
+      const reason = this.truncateFailReason(
+        this.kakaoPayProvider.getFailureMessage(error),
+      );
+
+      await this.paymentRepo.updatePayment(payment.paymentId, {
+        status: PaymentStatus.FAILED,
+        failReason: reason,
+      });
+
+      throw new EServiceUnavailableException({
+        message: '카카오페이 결제수단 변경 준비 요청에 실패했습니다.',
         errorCode: ERROR_CODE.PAYMENT_READY_FAILED,
       });
     }
@@ -199,6 +277,111 @@ export class PaymentsService {
       methodId: paymentMethod.methodId,
       status: PaymentStatus.APPROVED,
       approvedAt: updatedPayment?.approvedAt ?? approvedAt,
+    };
+  }
+
+  async approveKakaoMethodChange(query: KakaoApproveQueryDto) {
+    const payment = await this.paymentRepo.findByPaymentId(query.paymentId);
+    if (!payment) {
+      throw new ENotFoundException({
+        message: '결제 정보를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.PAYMENT_NOT_FOUND,
+      });
+    }
+
+    if (
+      payment.status !== PaymentStatus.READY ||
+      !payment.tid ||
+      !payment.subscriptionId
+    ) {
+      throw new EBadRequestException({
+        message: '결제수단 변경 승인 가능한 결제 상태가 아닙니다.',
+        errorCode: ERROR_CODE.PAYMENT_NOT_READY,
+      });
+    }
+
+    const subscription = await this.subscriptionsService.getSubscriptionById(
+      payment.subscriptionId,
+    );
+    if (!subscription) {
+      throw new ENotFoundException({
+        message: '구독 정보를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.SUBSCRIPTION_NOT_FOUND,
+      });
+    }
+
+    let approvedAt = new Date();
+    let sid: string;
+
+    try {
+      const approved = await this.kakaoPayProvider.approveSubscription({
+        paymentId: payment.paymentId,
+        userId: payment.userId,
+        tid: payment.tid,
+        pgToken: query.pg_token,
+      });
+
+      if (!approved.sid) {
+        throw new Error('KakaoPay approve response missing sid.');
+      }
+
+      sid = approved.sid;
+      approvedAt = approved.approved_at
+        ? new Date(approved.approved_at)
+        : approvedAt;
+    } catch (error) {
+      const reason = this.truncateFailReason(
+        this.kakaoPayProvider.getFailureMessage(error),
+      );
+
+      await this.paymentRepo.updatePayment(payment.paymentId, {
+        status: PaymentStatus.FAILED,
+        failReason: reason,
+      });
+
+      throw new EServiceUnavailableException({
+        message: '카카오페이 결제수단 변경 승인 요청에 실패했습니다.',
+        errorCode: ERROR_CODE.PAYMENT_APPROVE_FAILED,
+      });
+    }
+
+    const paymentMethod = await this.paymentMethodRepo.createMethod({
+      userId: payment.userId,
+      methodType: PaymentMethodType.KAKAOPAY,
+      billingKey: encryptBillingKey(
+        sid,
+        this.configService.get('PAYMENT_BILLING_KEY_SECRET'),
+      ),
+      displayName: KAKAOPAY_DISPLAY_NAME,
+      isDefault: false,
+    });
+    await this.paymentMethodRepo.setDefault(
+      payment.userId,
+      paymentMethod.methodId,
+    );
+
+    const updatedPayment = await this.paymentRepo.updatePayment(
+      payment.paymentId,
+      {
+        methodId: paymentMethod.methodId,
+        status: PaymentStatus.APPROVED,
+        failReason: null,
+        approvedAt,
+      },
+    );
+
+    return {
+      paymentId: payment.paymentId,
+      subscriptionId: subscription.subscriptionId,
+      methodId: paymentMethod.methodId,
+      status: PaymentStatus.APPROVED,
+      approvedAt: updatedPayment?.approvedAt ?? approvedAt,
+      paymentMethod: {
+        methodId: paymentMethod.methodId,
+        methodType: paymentMethod.methodType,
+        displayName: paymentMethod.displayName,
+        isDefault: true,
+      },
     };
   }
 
@@ -325,6 +508,24 @@ export class PaymentsService {
 
   private truncateFailReason(reason: string): string {
     return reason.length > 200 ? reason.slice(0, 200) : reason;
+  }
+
+  private buildMethodChangeApprovalUrl(): string {
+    const approvalUrl = new URL(
+      this.configService.get('KAKAOPAY_APPROVAL_URL'),
+    );
+
+    if (approvalUrl.pathname.endsWith('/approve')) {
+      approvalUrl.pathname = `${approvalUrl.pathname.slice(
+        0,
+        -'/approve'.length,
+      )}${KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX}`;
+    } else {
+      approvalUrl.pathname = KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX;
+    }
+    approvalUrl.search = '';
+
+    return approvalUrl.toString();
   }
 
   private async updateKakaoResultPayment(

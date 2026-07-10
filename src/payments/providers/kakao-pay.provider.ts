@@ -13,6 +13,8 @@ export interface KakaoPayReadyRequest {
   paymentId: string;
   userId: string;
   amount: number;
+  itemName?: string;
+  approvalUrl?: string;
 }
 
 export interface KakaoPayReadyResponse {
@@ -59,12 +61,13 @@ export class KakaoPayProvider {
         cid: this.configService.get('KAKAOPAY_CID'),
         partner_order_id: request.paymentId,
         partner_user_id: request.userId,
-        item_name: PRO_PLAN_ITEM_NAME,
+        item_name: request.itemName ?? PRO_PLAN_ITEM_NAME,
         quantity: KAKAOPAY_DEFAULT_QUANTITY,
         total_amount: request.amount,
         tax_free_amount: KAKAOPAY_TAX_FREE_AMOUNT,
         approval_url: this.withPaymentId(
-          this.configService.get('KAKAOPAY_APPROVAL_URL'),
+          request.approvalUrl ??
+            this.configService.get('KAKAOPAY_APPROVAL_URL'),
           request.paymentId,
         ),
         cancel_url: this.withPaymentId(

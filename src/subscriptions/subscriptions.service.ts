@@ -107,6 +107,10 @@ export class SubscriptionsService {
     return this.subscriptionRepo.findBySubscriptionId(subscriptionId);
   }
 
+  async getActiveSubscriptionByUserId(userId: string) {
+    return this.subscriptionRepo.findActiveByUserId(userId);
+  }
+
   async activateMonthlyProSubscription(userId: string) {
     const now = new Date();
     const currentPeriodEnd = new Date(now);
