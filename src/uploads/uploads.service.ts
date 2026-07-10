@@ -538,6 +538,37 @@ export class UploadsService {
     }
   }
 
+  async deleteTempDocument(
+    userId: string,
+    tempDocumentId: string,
+  ): Promise<void> {
+    const tempDoc = await this.tempDocumentRepo.findById(tempDocumentId);
+    if (!tempDoc) {
+      throw new ENotFoundException({
+        message: '임시 문서를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_FOUND,
+      });
+    }
+    if (tempDoc.userId !== userId) {
+      throw new EForbiddenException({
+        message: '접근 권한이 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_OWNER,
+      });
+    }
+    if (
+      tempDoc.aiStatus === AiStatus.PENDING ||
+      tempDoc.aiStatus === AiStatus.PROCESSING
+    ) {
+      throw new EConflictException({
+        message: 'AI 분석이 진행 중인 문서는 삭제할 수 없습니다.',
+        errorCode: ERROR_CODE.TEMP_DOCUMENT_AI_IN_PROGRESS,
+      });
+    }
+
+    await this.deleteAllTempFiles(userId, tempDocumentId);
+    await this.tempDocumentRepo.deleteById(tempDocumentId);
+  }
+
   async deleteS3File(fileUrl: string): Promise<void> {
     const urlObj = new URL(fileUrl);
     const fileKey = decodeURIComponent(urlObj.pathname.slice(1));

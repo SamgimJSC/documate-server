@@ -57,4 +57,8 @@ export class TypeOrmTempDocumentRepository implements TempDocumentRepository {
 
     return ids.length;
   }
+
+  async deleteById(tempDocumentId: string): Promise<void> {
+    await this.repo.delete({ tempDocumentId });
+  }
 }

@@ -75,6 +75,18 @@ export class TypeOrmUserRepository implements UserRepository {
     return this.repo.save(user);
   }
 
+  async updatePlanAndStorageQuota(
+    userId: string,
+    plan: UserPlan,
+  ): Promise<User | null> {
+    const user = await this.findUser(userId);
+    if (!user) return null;
+
+    user.plan = plan;
+    user.storageQuotaBytes = STORAGE_QUOTA_BYTES[plan];
+    return this.repo.save(user);
+  }
+
   async incrementStorageUsedBytes(
     userId: string,
     bytes: number,

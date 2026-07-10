@@ -28,4 +28,13 @@ export type EnvConfigType = {
   AWS_ACCESS_KEY_ID: string;
   AWS_SECRET_ACCESS_KEY: string;
   AWS_CLOUDFRONT_URL?: string; // 선택값 — 있으면 fileUrl을 CloudFront 기준으로 생성
+
+  KAKAOPAY_CID: string;
+  KAKAOPAY_SECRET_KEY_DEV: string;
+  KAKAOPAY_API_HOST: string;
+  KAKAOPAY_APPROVAL_URL: string;
+  KAKAOPAY_CANCEL_URL: string;
+  KAKAOPAY_FAIL_URL: string;
+
+  PAYMENT_BILLING_KEY_SECRET: string;
 };

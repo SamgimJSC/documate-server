@@ -26,9 +26,16 @@ export class TypeOrmPaymentMethodRepository implements PaymentMethodRepository {
     return this.repo.find({ where: { userId } });
   }
 
+  async findDefaultByUserId(userId: string): Promise<PaymentMethod | null> {
+    return this.repo.findOne({ where: { userId, isDefault: true } });
+  }
+
   async setDefault(userId: string, methodId: string): Promise<boolean> {
     await this.repo.update({ userId }, { isDefault: false });
-    const result = await this.repo.update({ methodId }, { isDefault: true });
+    const result = await this.repo.update(
+      { userId, methodId },
+      { isDefault: true },
+    );
     return (result.affected ?? 0) > 0;
   }
 

@@ -2,6 +2,7 @@ import { CreateUserDto } from '../dto/createUser.dto';
 import { GetUsersQueryDto } from '../dto/getUsersQuery.dto';
 import { UpdateUserDto } from '../dto/updateUser.dto';
 import { User } from '../entities/user.entity';
+import { UserPlan } from '../../global/constants/userPlan.enum';
 
 export interface UserRepository {
   createUser(createUserDto: CreateUserDto): Promise<User>;
@@ -12,6 +13,7 @@ export interface UserRepository {
     userId: string,
     updateUserDto: UpdateUserDto,
   ): Promise<User | null>;
+  updatePlanAndStorageQuota(userId: string, plan: UserPlan): Promise<User | null>;
   incrementStorageUsedBytes(userId: string, bytes: number): Promise<void>;
   decrementStorageUsedBytes(userId: string, bytes: number): Promise<void>;
   softDeleteUser(userId: string, withdrawalReason?: string): Promise<boolean>;
