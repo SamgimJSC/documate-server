@@ -129,4 +129,47 @@ export class ReportsService {
       categories,
     };
   }
+
+  /*
+    TOP 방문 매장
+    - year 없으면 올해 기준, limit 없으면 5개
+  */
+  async getTopStores(
+    userId: string,
+    params: { year?: number; month?: number; limit?: number },
+  ) {
+    const targetYear = params.year ?? new Date().getFullYear();
+    const limit = params.limit ?? 5;
+
+    const stores = await this.reportsRepo.getTopStores({
+      userId,
+      year: targetYear,
+      month: params.month,
+      limit,
+    });
+
+    return { year: targetYear, month: params.month ?? null, stores };
+  }
+
+  /*
+    요일별 합계
+    - 요일 없는(0건) 날도 0으로 채워서 항상 7개(일~토) 반환
+  */
+  async getWeekdaySummary(userId: string, year?: number) {
+    const targetYear = year ?? new Date().getFullYear();
+
+    const rows = await this.reportsRepo.getWeekdayTotals(userId, targetYear);
+    const rowMap = new Map(rows.map((r) => [r.weekday, r]));
+
+    const weekdays = Array.from({ length: 7 }, (_, weekday) => {
+      const found = rowMap.get(weekday);
+      return {
+        weekday,
+        totalSpend: found?.totalSpend ?? 0,
+        receiptCount: found?.receiptCount ?? 0,
+      };
+    });
+
+    return { year: targetYear, weekdays };
+  }
 }

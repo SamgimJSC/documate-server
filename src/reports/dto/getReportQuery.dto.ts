@@ -4,10 +4,11 @@ import { IsDateString, IsInt, IsOptional, Max, Min } from 'class-validator';
 /*
   /reports/* API의 쿼리 파라미터 DTO
 
-  세 가지 엔드포인트 모두 이 DTO 하나로 처리:
+  네 가지 엔드포인트 모두 이 DTO 하나로 처리:
   - /reports/monthly-spend?year=2026
   - /reports/daily-spend?year=2026&month=6
   - /reports/category-summary?year=2026&month=6  또는  ?date=2026-06-09
+  - /reports/top-stores?year=2026&month=6&limit=5
 
   각 엔드포인트마다 필요한 파라미터는 다르지만,
   DTO 하나에 다 모아두고 컨트롤러/서비스에서 필요한 것만 꺼내 씁니다.
@@ -30,4 +31,11 @@ export class GetReportQueryDto {
   @IsOptional()
   @IsDateString() // "YYYY-MM-DD" 형식 검증
   date?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  limit?: number;
 }
