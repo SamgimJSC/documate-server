@@ -9,6 +9,8 @@ import {
   MonthlyTotal,
   ReportsRepository,
   ThisMonthSummary,
+  TopStoreTotal,
+  WeekdayTotal,
 } from './reports.interface';
 
 /*
@@ -172,6 +174,75 @@ export class TypeOrmReportsRepository implements ReportsRepository {
       totalSpend: Number(row?.total ?? 0),
       receiptCount: Number(row?.count ?? 0),
     };
+  }
+
+  /*
+    TOP 방문 매장
+    - store_name으로 GROUP BY, 총 지출액 기준 내림차순 limit개
+    - year만 있으면 연간 전체, year+month면 해당 월만
+  */
+  async getTopStores(params: {
+    userId: string;
+    year?: number;
+    month?: number;
+    limit: number;
+  }): Promise<TopStoreTotal[]> {
+    const { userId, year, month, limit } = params;
+
+    const qb = this.receiptRepo
+      .createQueryBuilder('r')
+      .select('r.store_name', 'storeName')
+      .addSelect('SUM(r.total_amount)', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .where('r.userId = :userId', { userId })
+      .andWhere('r.isDeleted = false');
+
+    if (year) {
+      qb.andWhere('EXTRACT(YEAR FROM r.purchase_date) = :year', { year });
+      if (month) {
+        qb.andWhere('EXTRACT(MONTH FROM r.purchase_date) = :month', {
+          month,
+        });
+      }
+    }
+
+    const rows = await qb
+      .groupBy('r.store_name')
+      .orderBy('total', 'DESC')
+      .limit(limit)
+      .getRawMany<{ storeName: string; total: string; count: string }>();
+
+    return rows.map((row) => ({
+      storeName: row.storeName,
+      totalSpend: Number(row.total),
+      visitCount: Number(row.count),
+    }));
+  }
+
+  /*
+    요일별 합계 (0=일 ~ 6=토, EXTRACT(DOW ...)와 동일)
+  */
+  async getWeekdayTotals(
+    userId: string,
+    year: number,
+  ): Promise<WeekdayTotal[]> {
+    const rows = await this.receiptRepo
+      .createQueryBuilder('r')
+      .select('EXTRACT(DOW FROM r.purchase_date)', 'weekday')
+      .addSelect('SUM(r.total_amount)', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .where('r.userId = :userId', { userId })
+      .andWhere('r.isDeleted = false')
+      .andWhere('EXTRACT(YEAR FROM r.purchase_date) = :year', { year })
+      .groupBy('weekday')
+      .orderBy('weekday', 'ASC')
+      .getRawMany<{ weekday: string; total: string; count: string }>();
+
+    return rows.map((row) => ({
+      weekday: Number(row.weekday),
+      totalSpend: Number(row.total),
+      receiptCount: Number(row.count),
+    }));
   }
 
   /*

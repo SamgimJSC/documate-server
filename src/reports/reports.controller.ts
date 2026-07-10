@@ -70,4 +70,29 @@ export class ReportsController {
       date: query.date,
     });
   }
+
+  // ====================================================================
+  // GET /reports/top-stores?year=2026&month=6&limit=5
+  // TOP 방문 매장 (총 지출액 기준 내림차순, 기본 5개)
+  // ====================================================================
+  @Get('top-stores')
+  getTopStores(@DecoUser() user: ReqUser, @Query() query: GetReportQueryDto) {
+    return this.reportsService.getTopStores(user.userId, {
+      year: query.year,
+      month: query.month,
+      limit: query.limit,
+    });
+  }
+
+  // ====================================================================
+  // GET /reports/weekday-summary?year=2026
+  // 요일별 지출 합계 (일~토 0-fill)
+  // ====================================================================
+  @Get('weekday-summary')
+  getWeekdaySummary(
+    @DecoUser() user: ReqUser,
+    @Query() query: GetReportQueryDto,
+  ) {
+    return this.reportsService.getWeekdaySummary(user.userId, query.year);
+  }
 }
