@@ -31,12 +31,17 @@ export class TypeOrmPaymentMethodRepository implements PaymentMethodRepository {
   }
 
   async setDefault(userId: string, methodId: string): Promise<boolean> {
-    await this.repo.update({ userId }, { isDefault: false });
-    const result = await this.repo.update(
-      { userId, methodId },
-      { isDefault: true },
-    );
-    return (result.affected ?? 0) > 0;
+    await this.repo
+      .createQueryBuilder()
+      .update(PaymentMethod)
+      .set({ isDefault: () => 'method_id = :methodId' })
+      .where('user_id = :userId', { userId, methodId })
+      .execute();
+
+    const updated = await this.repo.findOne({
+      where: { userId, methodId, isDefault: true },
+    });
+    return Boolean(updated);
   }
 
   async deleteMethod(methodId: string): Promise<boolean> {

@@ -10,12 +10,15 @@ import { TypeOrmPaymentMethodRepository } from '../payments/model/payment-method
 import { UserPlan } from '../global/constants/userPlan.enum';
 import { Subscription } from './entities/subscription.entity';
 import { PaymentMethod } from '../payments/entities/payment-method.entity';
+import { UsersService } from '../users/users.service';
+import { Transactional } from 'typeorm-transactional';
 
 @Injectable()
 export class SubscriptionsService {
   constructor(
     private readonly subscriptionRepo: TypeOrmSubscriptionRepository,
     private readonly paymentMethodRepo: TypeOrmPaymentMethodRepository,
+    private readonly usersService: UsersService,
   ) {}
 
   async getMySubscription(user: ReqUser) {
@@ -111,6 +114,51 @@ export class SubscriptionsService {
     return this.subscriptionRepo.findActiveByUserId(userId);
   }
 
+  async getMonthlyBillingTargets(now: Date = new Date()) {
+    return this.subscriptionRepo.findMonthlyBillingTargets(now);
+  }
+
+  @Transactional()
+  async completeCanceledSubscription(
+    subscription: Subscription,
+    canceledAt: Date = new Date(),
+  ) {
+    const updatedSubscription = await this.subscriptionRepo.updateSubscription(
+      subscription.subscriptionId,
+      {
+        status: SubscriptionStatus.CANCELED,
+        isCanceled: false,
+        canceledAt: subscription.canceledAt ?? canceledAt,
+      },
+    );
+
+    await this.usersService.updatePlanAndStorageQuota(
+      subscription.userId,
+      UserPlan.FREE,
+    );
+
+    return updatedSubscription;
+  }
+
+  async renewMonthlySubscription(
+    subscription: Subscription,
+    paidAt: Date = new Date(),
+  ) {
+    const nextPeriodEnd = this.addOneMonth(
+      this.getRenewalBaseDate(subscription, paidAt),
+    );
+
+    return this.subscriptionRepo.updateSubscription(
+      subscription.subscriptionId,
+      {
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodEnd: nextPeriodEnd,
+        isCanceled: false,
+        canceledAt: null,
+      },
+    );
+  }
+
   async activateMonthlyProSubscription(userId: string) {
     const now = new Date();
     const currentPeriodEnd = new Date(now);
@@ -179,5 +227,22 @@ export class SubscriptionsService {
 
   private getDefaultPaymentMethod(userId: string) {
     return this.paymentMethodRepo.findDefaultByUserId(userId);
+  }
+
+  private getRenewalBaseDate(subscription: Subscription, paidAt: Date) {
+    if (
+      subscription.currentPeriodEnd &&
+      subscription.currentPeriodEnd > paidAt
+    ) {
+      return subscription.currentPeriodEnd;
+    }
+
+    return paidAt;
+  }
+
+  private addOneMonth(date: Date) {
+    const nextDate = new Date(date);
+    nextDate.setMonth(nextDate.getMonth() + 1);
+    return nextDate;
   }
 }

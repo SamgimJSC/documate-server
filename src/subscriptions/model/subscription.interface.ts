@@ -6,6 +6,7 @@ export interface SubscriptionRepository {
   createSubscription(dto: CreateSubscriptionDto): Promise<Subscription>;
   findBySubscriptionId(subscriptionId: string): Promise<Subscription | null>;
   findActiveByUserId(userId: string): Promise<Subscription | null>;
+  findMonthlyBillingTargets(now: Date): Promise<Subscription[]>;
   findByUserId(userId: string): Promise<Subscription[]>;
   updateSubscription(
     subscriptionId: string,

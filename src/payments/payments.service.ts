@@ -25,10 +25,30 @@ import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
 import { TypedConfigService } from '../configs/typedConfig.service';
-import { encryptBillingKey } from './utils/billing-key.crypto';
+import {
+  decryptBillingKey,
+  encryptBillingKey,
+} from './utils/billing-key.crypto';
 import { Payment } from './entities/payment.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
+import { Transactional } from 'typeorm-transactional';
+
+type MonthlyBillingResult = {
+  subscriptionId: string;
+  userId: string;
+  result: PaymentStatus.APPROVED | PaymentStatus.FAILED | 'CANCELED';
+  paymentId: string | null;
+  message: string | null;
+  currentPeriodEnd: Date | null;
+};
+
+type PaymentFrontendRedirectResult = 'success' | 'cancel' | 'fail';
+
+type PaymentFrontendRedirectPayload = Record<
+  string,
+  string | number | boolean | Date | null | undefined
+>;
 
 @Injectable()
 export class PaymentsService {
@@ -177,6 +197,7 @@ export class PaymentsService {
     }
   }
 
+  @Transactional()
   async approveKakaoPayment(query: KakaoApproveQueryDto) {
     const payment = await this.paymentRepo.findByPaymentId(query.paymentId);
     if (!payment) {
@@ -280,6 +301,7 @@ export class PaymentsService {
     };
   }
 
+  @Transactional()
   async approveKakaoMethodChange(query: KakaoApproveQueryDto) {
     const payment = await this.paymentRepo.findByPaymentId(query.paymentId);
     if (!payment) {
@@ -416,7 +438,9 @@ export class PaymentsService {
   async getMyPayments(userId: string, query: GetPaymentsQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const payments = await this.paymentRepo.findByUserId(userId);
+    const payments = (await this.paymentRepo.findByUserId(userId)).filter(
+      (payment) => payment.status !== PaymentStatus.READY,
+    );
     const start = (page - 1) * limit;
     const items = payments.slice(start, start + limit);
     const methodMap = await this.getPaymentMethodMap(items);
@@ -436,6 +460,198 @@ export class PaymentsService {
       page,
       limit,
       hasNext: start + limit < payments.length,
+    };
+  }
+
+  buildFrontendPaymentRedirectUrl(
+    result: PaymentFrontendRedirectResult,
+    payload: PaymentFrontendRedirectPayload,
+  ) {
+    const baseUrl = this.getFrontendPaymentRedirectBaseUrl(result);
+    if (!baseUrl) return null;
+
+    try {
+      const url = new URL(baseUrl);
+      url.searchParams.set('result', result);
+
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') return;
+
+        url.searchParams.set(
+          key,
+          value instanceof Date ? value.toISOString() : String(value),
+        );
+      });
+
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  async runMonthlySubscriptionBilling(now: Date = new Date()) {
+    const subscriptions =
+      await this.subscriptionsService.getMonthlyBillingTargets(now);
+    const results: MonthlyBillingResult[] = [];
+
+    for (const subscription of subscriptions) {
+      if (subscription.isCanceled) {
+        const completedSubscription =
+          await this.subscriptionsService.completeCanceledSubscription(
+            subscription,
+            now,
+          );
+
+        results.push({
+          subscriptionId: subscription.subscriptionId,
+          userId: subscription.userId,
+          result: 'CANCELED',
+          paymentId: null,
+          message: '해지예약 구독이 종료되었습니다.',
+          currentPeriodEnd: completedSubscription?.currentPeriodEnd ?? null,
+        });
+        continue;
+      }
+
+      results.push(await this.billMonthlySubscription(subscription, now));
+    }
+
+    return {
+      total: subscriptions.length,
+      approved: results.filter((result) => result.result === 'APPROVED').length,
+      failed: results.filter((result) => result.result === 'FAILED').length,
+      canceled: results.filter((result) => result.result === 'CANCELED').length,
+      results,
+    };
+  }
+
+  async runMonthlySubscriptionBillingManually() {
+    if (process.env.NODE_ENV === 'production') {
+      throw new EBadRequestException({
+        message: '운영 환경에서는 수동 정기결제 실행 API를 사용할 수 없습니다.',
+        errorCode: ERROR_CODE.PAYMENT_BILLING_RUN_FORBIDDEN,
+      });
+    }
+
+    return this.runMonthlySubscriptionBilling();
+  }
+
+  private async billMonthlySubscription(
+    subscription: Subscription,
+    now: Date,
+  ): Promise<MonthlyBillingResult> {
+    const amount = PRO_PLAN_AMOUNT[BillingCycle.MONTHLY];
+    const paymentMethod = await this.paymentMethodRepo.findDefaultByUserId(
+      subscription.userId,
+    );
+    const payment = await this.paymentRepo.createPayment({
+      userId: subscription.userId,
+      subscriptionId: subscription.subscriptionId,
+      methodId: paymentMethod?.methodId ?? null,
+      tid: null,
+      amount,
+      status: PaymentStatus.READY,
+    });
+
+    if (!paymentMethod) {
+      const reason = '기본 결제수단을 찾을 수 없습니다.';
+      await this.paymentRepo.updatePayment(payment.paymentId, {
+        status: PaymentStatus.FAILED,
+        failReason: reason,
+      });
+
+      return this.buildBillingResult(
+        subscription,
+        payment.paymentId,
+        PaymentStatus.FAILED,
+        reason,
+      );
+    }
+
+    let sid: string;
+    try {
+      sid = decryptBillingKey(
+        paymentMethod.billingKey,
+        this.configService.get('PAYMENT_BILLING_KEY_SECRET'),
+      );
+    } catch {
+      const reason = '정기결제 키 복호화에 실패했습니다.';
+      await this.paymentRepo.updatePayment(payment.paymentId, {
+        status: PaymentStatus.FAILED,
+        failReason: reason,
+      });
+
+      return this.buildBillingResult(
+        subscription,
+        payment.paymentId,
+        PaymentStatus.FAILED,
+        reason,
+      );
+    }
+
+    try {
+      const approved =
+        await this.kakaoPayProvider.requestSubscriptionPayment({
+          paymentId: payment.paymentId,
+          userId: subscription.userId,
+          sid,
+          amount,
+        });
+      const approvedAt = approved.approved_at
+        ? new Date(approved.approved_at)
+        : now;
+
+      await this.paymentRepo.updatePayment(payment.paymentId, {
+        tid: approved.tid,
+        status: PaymentStatus.APPROVED,
+        failReason: null,
+        approvedAt,
+      });
+      const renewedSubscription =
+        await this.subscriptionsService.renewMonthlySubscription(
+          subscription,
+          approvedAt,
+        );
+
+      return {
+        subscriptionId: subscription.subscriptionId,
+        userId: subscription.userId,
+        result: PaymentStatus.APPROVED,
+        paymentId: payment.paymentId,
+        message: null,
+        currentPeriodEnd: renewedSubscription?.currentPeriodEnd ?? null,
+      };
+    } catch (error) {
+      const reason = this.truncateFailReason(
+        this.kakaoPayProvider.getFailureMessage(error),
+      );
+      await this.paymentRepo.updatePayment(payment.paymentId, {
+        status: PaymentStatus.FAILED,
+        failReason: reason,
+      });
+
+      return this.buildBillingResult(
+        subscription,
+        payment.paymentId,
+        PaymentStatus.FAILED,
+        reason,
+      );
+    }
+  }
+
+  private buildBillingResult(
+    subscription: Subscription,
+    paymentId: string,
+    status: PaymentStatus.APPROVED | PaymentStatus.FAILED,
+    message: string | null,
+  ): MonthlyBillingResult {
+    return {
+      subscriptionId: subscription.subscriptionId,
+      userId: subscription.userId,
+      result: status,
+      paymentId,
+      message,
+      currentPeriodEnd: subscription.currentPeriodEnd,
     };
   }
 
@@ -526,6 +742,20 @@ export class PaymentsService {
     approvalUrl.search = '';
 
     return approvalUrl.toString();
+  }
+
+  private getFrontendPaymentRedirectBaseUrl(
+    result: PaymentFrontendRedirectResult,
+  ) {
+    if (result === 'success') {
+      return this.configService.get('FRONTEND_PAYMENT_SUCCESS_URL');
+    }
+
+    if (result === 'cancel') {
+      return this.configService.get('FRONTEND_PAYMENT_CANCEL_URL');
+    }
+
+    return this.configService.get('FRONTEND_PAYMENT_FAIL_URL');
   }
 
   private async updateKakaoResultPayment(

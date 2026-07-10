@@ -5,6 +5,7 @@ import {
   KAKAOPAY_APPROVE_PATH,
   KAKAOPAY_DEFAULT_QUANTITY,
   KAKAOPAY_READY_PATH,
+  KAKAOPAY_SUBSCRIPTION_PATH,
   KAKAOPAY_TAX_FREE_AMOUNT,
   PRO_PLAN_ITEM_NAME,
 } from '../const/payment.const';
@@ -45,6 +46,33 @@ export interface KakaoPayApproveResponse {
   item_name?: string;
   quantity?: number;
   created_at?: string;
+  approved_at?: string;
+}
+
+export interface KakaoPaySubscriptionPaymentRequest {
+  paymentId: string;
+  userId: string;
+  sid: string;
+  amount: number;
+}
+
+export interface KakaoPaySubscriptionPaymentResponse {
+  aid: string;
+  tid: string;
+  cid: string;
+  sid: string;
+  partner_order_id: string;
+  partner_user_id: string;
+  payment_method_type?: string;
+  item_name?: string;
+  quantity?: number;
+  amount?: {
+    total?: number;
+    tax_free?: number;
+    vat?: number;
+    point?: number;
+    discount?: number;
+  };
   approved_at?: string;
 }
 
@@ -103,6 +131,34 @@ export class KakaoPayProvider {
         partner_order_id: request.paymentId,
         partner_user_id: request.userId,
         pg_token: request.pgToken,
+      },
+      {
+        headers: {
+          Authorization: `SECRET_KEY ${this.configService.get(
+            'KAKAOPAY_SECRET_KEY_DEV',
+          )}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  async requestSubscriptionPayment(
+    request: KakaoPaySubscriptionPaymentRequest,
+  ): Promise<KakaoPaySubscriptionPaymentResponse> {
+    const response = await axios.post<KakaoPaySubscriptionPaymentResponse>(
+      this.buildUrl(KAKAOPAY_SUBSCRIPTION_PATH),
+      {
+        cid: this.configService.get('KAKAOPAY_CID'),
+        sid: request.sid,
+        partner_order_id: request.paymentId,
+        partner_user_id: request.userId,
+        item_name: PRO_PLAN_ITEM_NAME,
+        quantity: KAKAOPAY_DEFAULT_QUANTITY,
+        total_amount: request.amount,
+        tax_free_amount: KAKAOPAY_TAX_FREE_AMOUNT,
       },
       {
         headers: {
