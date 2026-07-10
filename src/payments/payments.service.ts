@@ -200,20 +200,30 @@ export class PaymentsService {
   }
 
   async cancelKakaoPayment(query: KakaoResultQueryDto) {
+    const payment = await this.updateKakaoResultPayment(
+      query.paymentId,
+      PaymentStatus.CANCELED,
+      query.reason ?? '사용자가 카카오페이 결제를 취소했습니다.',
+    );
+
     return {
-      paymentId: query.paymentId,
+      paymentId: payment.paymentId,
       status: PaymentStatus.CANCELED,
-      reason: query.reason ?? null,
-      message: '카카오페이 cancel 콜백 엔드포인트 골격입니다.',
+      reason: payment.failReason,
     };
   }
 
   async failKakaoPayment(query: KakaoResultQueryDto) {
+    const payment = await this.updateKakaoResultPayment(
+      query.paymentId,
+      PaymentStatus.FAILED,
+      query.reason ?? '카카오페이 결제에 실패했습니다.',
+    );
+
     return {
-      paymentId: query.paymentId,
+      paymentId: payment.paymentId,
       status: PaymentStatus.FAILED,
-      reason: query.reason ?? null,
-      message: '카카오페이 fail 콜백 엔드포인트 골격입니다.',
+      reason: payment.failReason,
     };
   }
 
@@ -235,6 +245,27 @@ export class PaymentsService {
 
   private truncateFailReason(reason: string): string {
     return reason.length > 200 ? reason.slice(0, 200) : reason;
+  }
+
+  private async updateKakaoResultPayment(
+    paymentId: string,
+    status: PaymentStatus.CANCELED | PaymentStatus.FAILED,
+    reason: string,
+  ) {
+    const payment = await this.paymentRepo.findByPaymentId(paymentId);
+    if (!payment) {
+      throw new ENotFoundException({
+        message: '결제 정보를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.PAYMENT_NOT_FOUND,
+      });
+    }
+
+    const updatedPayment = await this.paymentRepo.updatePayment(paymentId, {
+      status,
+      failReason: this.truncateFailReason(reason),
+    });
+
+    return updatedPayment ?? payment;
   }
 
   private assertMonthlyOnly(billingCycle: BillingCycle): void {
