@@ -6,69 +6,105 @@ import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { TypeOrmSubscriptionRepository } from './model/subscription.repository';
 import { CancelSubscriptionDto } from './dto/cancelSubscription.dto';
 import { BillingCycle } from '../global/constants/billingCycle.enum';
+import { TypeOrmPaymentMethodRepository } from '../payments/model/payment-method.repository';
+import { UserPlan } from '../global/constants/userPlan.enum';
+import { Subscription } from './entities/subscription.entity';
+import { PaymentMethod } from '../payments/entities/payment-method.entity';
 
 @Injectable()
 export class SubscriptionsService {
   constructor(
     private readonly subscriptionRepo: TypeOrmSubscriptionRepository,
+    private readonly paymentMethodRepo: TypeOrmPaymentMethodRepository,
   ) {}
 
   async getMySubscription(user: ReqUser) {
     const subscription = await this.subscriptionRepo.findActiveByUserId(
       user.userId,
     );
+    const paymentMethod = await this.getDefaultPaymentMethod(user.userId);
 
-    return {
-      plan: user.plan,
-      status: subscription?.status ?? null,
-      billingCycle: subscription?.billingCycle ?? null,
-      startedAt: subscription?.startedAt ?? null,
-      currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
-      nextBillingAt: subscription?.currentPeriodEnd ?? null,
-      isCanceled: subscription?.isCanceled ?? false,
-      paymentMethod: null,
-    };
+    return this.buildMySubscriptionResponse(
+      user.plan,
+      subscription,
+      paymentMethod,
+    );
   }
 
-  async cancelMySubscription(userId: string, dto: CancelSubscriptionDto) {
-    const subscription = await this.subscriptionRepo.findActiveByUserId(userId);
+  async cancelMySubscription(user: ReqUser, dto: CancelSubscriptionDto) {
+    const subscription = await this.subscriptionRepo.findActiveByUserId(
+      user.userId,
+    );
     if (!subscription) {
       throw new ENotFoundException({
         message: '활성 구독을 찾을 수 없습니다.',
-        errorCode: ERROR_CODE.USER_NOT_FOUND,
+        errorCode: ERROR_CODE.SUBSCRIPTION_NOT_FOUND,
       });
     }
 
+    const paymentMethod = await this.getDefaultPaymentMethod(user.userId);
+
     if (dto.cancelAtPeriodEnd) {
-      return this.subscriptionRepo.updateSubscription(
+      const updatedSubscription = await this.subscriptionRepo.updateSubscription(
         subscription.subscriptionId,
         {
           isCanceled: true,
           canceledAt: new Date(),
         },
       );
+
+      return this.buildMySubscriptionResponse(
+        user.plan,
+        updatedSubscription,
+        paymentMethod,
+      );
     }
 
-    return this.subscriptionRepo.updateSubscription(subscription.subscriptionId, {
-      status: SubscriptionStatus.CANCELED,
-      isCanceled: false,
-      canceledAt: new Date(),
-    });
+    const updatedSubscription = await this.subscriptionRepo.updateSubscription(
+      subscription.subscriptionId,
+      {
+        status: SubscriptionStatus.CANCELED,
+        isCanceled: false,
+        canceledAt: new Date(),
+      },
+    );
+
+    return this.buildMySubscriptionResponse(
+      user.plan,
+      updatedSubscription,
+      paymentMethod,
+    );
   }
 
-  async undoCancelMySubscription(userId: string) {
-    const subscription = await this.subscriptionRepo.findActiveByUserId(userId);
+  async undoCancelMySubscription(user: ReqUser) {
+    const subscription = await this.subscriptionRepo.findActiveByUserId(
+      user.userId,
+    );
     if (!subscription) {
       throw new ENotFoundException({
         message: '활성 구독을 찾을 수 없습니다.',
-        errorCode: ERROR_CODE.USER_NOT_FOUND,
+        errorCode: ERROR_CODE.SUBSCRIPTION_NOT_FOUND,
       });
     }
 
-    return this.subscriptionRepo.updateSubscription(subscription.subscriptionId, {
-      isCanceled: false,
-      canceledAt: null,
-    });
+    const paymentMethod = await this.getDefaultPaymentMethod(user.userId);
+    const updatedSubscription = await this.subscriptionRepo.updateSubscription(
+      subscription.subscriptionId,
+      {
+        isCanceled: false,
+        canceledAt: null,
+      },
+    );
+
+    return this.buildMySubscriptionResponse(
+      user.plan,
+      updatedSubscription,
+      paymentMethod,
+    );
+  }
+
+  async getSubscriptionById(subscriptionId: string) {
+    return this.subscriptionRepo.findBySubscriptionId(subscriptionId);
   }
 
   async activateMonthlyProSubscription(userId: string) {
@@ -101,5 +137,43 @@ export class SubscriptionsService {
       currentPeriodEnd,
       trialEndAt: null,
     });
+  }
+
+  private buildMySubscriptionResponse(
+    plan: UserPlan,
+    subscription: Subscription | null,
+    paymentMethod: PaymentMethod | null,
+  ) {
+    return {
+      plan,
+      status: subscription?.status ?? null,
+      billingCycle: subscription?.billingCycle ?? null,
+      currentPeriodStart: subscription?.startedAt ?? null,
+      currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+      nextBillingAt: this.getNextBillingAt(subscription),
+      isCanceled: subscription?.isCanceled ?? false,
+      canceledAt: subscription?.canceledAt ?? null,
+      cancelReason: null,
+      paymentMethod: paymentMethod
+        ? {
+            methodId: paymentMethod.methodId,
+            methodType: paymentMethod.methodType,
+            displayName: paymentMethod.displayName,
+            isDefault: paymentMethod.isDefault,
+          }
+        : null,
+    };
+  }
+
+  private getNextBillingAt(subscription: Subscription | null) {
+    if (!subscription) return null;
+    if (subscription.isCanceled) return null;
+    if (subscription.status !== SubscriptionStatus.ACTIVE) return null;
+
+    return subscription.currentPeriodEnd;
+  }
+
+  private getDefaultPaymentMethod(userId: string) {
+    return this.paymentMethodRepo.findDefaultByUserId(userId);
   }
 }

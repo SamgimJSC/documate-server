@@ -21,6 +21,9 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
 import { TypedConfigService } from '../configs/typedConfig.service';
 import { encryptBillingKey } from './utils/billing-key.crypto';
+import { Payment } from './entities/payment.entity';
+import { PaymentMethod } from './entities/payment-method.entity';
+import { Subscription } from '../subscriptions/entities/subscription.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -233,13 +236,90 @@ export class PaymentsService {
     const payments = await this.paymentRepo.findByUserId(userId);
     const start = (page - 1) * limit;
     const items = payments.slice(start, start + limit);
+    const methodMap = await this.getPaymentMethodMap(items);
+    const subscriptionMap = await this.getSubscriptionMap(items);
 
     return {
-      items,
+      items: items.map((payment) =>
+        this.buildPaymentHistoryItem(
+          payment,
+          payment.methodId ? (methodMap.get(payment.methodId) ?? null) : null,
+          payment.subscriptionId
+            ? (subscriptionMap.get(payment.subscriptionId) ?? null)
+            : null,
+        ),
+      ),
       total: payments.length,
       page,
       limit,
       hasNext: start + limit < payments.length,
+    };
+  }
+
+  private async getPaymentMethodMap(payments: Payment[]) {
+    const methodIds = [
+      ...new Set(
+        payments
+          .map((payment) => payment.methodId)
+          .filter((methodId): methodId is string => Boolean(methodId)),
+      ),
+    ];
+    const methods = await Promise.all(
+      methodIds.map((methodId) =>
+        this.paymentMethodRepo.findByMethodId(methodId),
+      ),
+    );
+
+    return new Map(
+      methods
+        .filter((method): method is PaymentMethod => Boolean(method))
+        .map((method) => [method.methodId, method]),
+    );
+  }
+
+  private async getSubscriptionMap(payments: Payment[]) {
+    const subscriptionIds = [
+      ...new Set(
+        payments
+          .map((payment) => payment.subscriptionId)
+          .filter(
+            (subscriptionId): subscriptionId is string =>
+              Boolean(subscriptionId),
+          ),
+      ),
+    ];
+    const subscriptions = await Promise.all(
+      subscriptionIds.map((subscriptionId) =>
+        this.subscriptionsService.getSubscriptionById(subscriptionId),
+      ),
+    );
+
+    return new Map(
+      subscriptions
+        .filter(
+          (subscription): subscription is Subscription => Boolean(subscription),
+        )
+        .map((subscription) => [subscription.subscriptionId, subscription]),
+    );
+  }
+
+  private buildPaymentHistoryItem(
+    payment: Payment,
+    method: PaymentMethod | null,
+    subscription: Subscription | null,
+  ) {
+    return {
+      paymentId: payment.paymentId,
+      subscriptionId: payment.subscriptionId,
+      methodId: payment.methodId,
+      status: payment.status,
+      amount: Number(payment.amount),
+      billingCycle: subscription?.billingCycle ?? null,
+      methodType: method?.methodType ?? null,
+      methodName: method?.displayName ?? null,
+      failReason: payment.failReason,
+      approvedAt: payment.approvedAt,
+      createdAt: payment.createdAt,
     };
   }
 

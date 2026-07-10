@@ -20,11 +20,11 @@ export class SubscriptionsController {
     @DecoUser() user: ReqUser,
     @Body() dto: CancelSubscriptionDto,
   ) {
-    return this.subscriptionsService.cancelMySubscription(user.userId, dto);
+    return this.subscriptionsService.cancelMySubscription(user, dto);
   }
 
   @Patch('me/cancel/undo')
   undoCancelMySubscription(@DecoUser() user: ReqUser) {
-    return this.subscriptionsService.undoCancelMySubscription(user.userId);
+    return this.subscriptionsService.undoCancelMySubscription(user);
   }
 }
