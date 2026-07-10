@@ -51,6 +51,26 @@ export interface ThisMonthSummary {
   receiptCount: number;
 }
 
+/*
+  상점별 집계 결과 한 줄 (TOP 방문 매장)
+  - totalSpend 기준 내림차순으로 반환됨
+*/
+export interface TopStoreTotal {
+  storeName: string;
+  totalSpend: number;
+  visitCount: number;
+}
+
+/*
+  요일별 집계 결과 한 줄
+  - weekday: 0(일)~6(토), PostgreSQL EXTRACT(DOW ...)와 동일한 규칙
+*/
+export interface WeekdayTotal {
+  weekday: number;
+  totalSpend: number;
+  receiptCount: number;
+}
+
 export interface ReportsRepository {
   // 월별 합계 (특정 연도)
   getMonthlyTotals(userId: string, year: number): Promise<MonthlyTotal[]>;
@@ -80,4 +100,15 @@ export interface ReportsRepository {
     year: number,
     month: number,
   ): Promise<ThisMonthSummary>;
+
+  // TOP 방문 매장 (year만 / year+month, totalSpend 내림차순 limit개)
+  getTopStores(params: {
+    userId: string;
+    year?: number;
+    month?: number;
+    limit: number;
+  }): Promise<TopStoreTotal[]>;
+
+  // 요일별 합계 (특정 연도)
+  getWeekdayTotals(userId: string, year: number): Promise<WeekdayTotal[]>;
 }
