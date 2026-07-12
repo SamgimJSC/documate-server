@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BillingCycle } from '../global/constants/billingCycle.enum';
 import { PaymentMethodType } from '../global/constants/paymentMethodType.enum';
 import { PaymentStatus } from '../global/constants/paymentStatus.enum';
+import { SubscriptionStatus } from '../global/constants/subscriptionStatus.enum';
 import { UserPlan } from '../global/constants/userPlan.enum';
 import { TypeOrmPaymentRepository } from './model/payment.repository';
 import { TypeOrmPaymentMethodRepository } from './model/payment-method.repository';
@@ -15,6 +16,7 @@ import {
   KAKAOPAY_DISPLAY_NAME,
   KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX,
   KAKAOPAY_METHOD_CHANGE_ITEM_NAME,
+  MAX_BILLING_FAILURE_COUNT,
   PRO_PLAN_AMOUNT,
 } from './const/payment.const';
 import { KakaoPayProvider } from './providers/kakao-pay.provider';
@@ -381,6 +383,7 @@ export class PaymentsService {
       payment.userId,
       paymentMethod.methodId,
     );
+    await this.deleteOtherPaymentMethods(payment.userId, paymentMethod.methodId);
 
     const updatedPayment = await this.paymentRepo.updatePayment(
       payment.paymentId,
@@ -564,7 +567,7 @@ export class PaymentsService {
         subscription,
         payment.paymentId,
         PaymentStatus.FAILED,
-        reason,
+        await this.recordAndDescribeBillingFailure(subscription, reason),
       );
     }
 
@@ -585,7 +588,7 @@ export class PaymentsService {
         subscription,
         payment.paymentId,
         PaymentStatus.FAILED,
-        reason,
+        await this.recordAndDescribeBillingFailure(subscription, reason),
       );
     }
 
@@ -634,9 +637,23 @@ export class PaymentsService {
         subscription,
         payment.paymentId,
         PaymentStatus.FAILED,
-        reason,
+        await this.recordAndDescribeBillingFailure(subscription, reason),
       );
     }
+  }
+
+  private async recordAndDescribeBillingFailure(
+    subscription: Subscription,
+    reason: string,
+  ): Promise<string> {
+    const updatedSubscription =
+      await this.subscriptionsService.recordBillingFailure(subscription);
+
+    if (updatedSubscription?.status === SubscriptionStatus.EXPIRED) {
+      return `${reason} (${MAX_BILLING_FAILURE_COUNT}회 연속 실패로 구독이 종료되고 FREE로 전환되었습니다.)`;
+    }
+
+    return reason;
   }
 
   private buildBillingResult(
@@ -726,6 +743,19 @@ export class PaymentsService {
     return reason.length > 200 ? reason.slice(0, 200) : reason;
   }
 
+  private async deleteOtherPaymentMethods(
+    userId: string,
+    keepMethodId: string,
+  ) {
+    const methods = await this.paymentMethodRepo.findByUserId(userId);
+
+    await Promise.all(
+      methods
+        .filter((method) => method.methodId !== keepMethodId)
+        .map((method) => this.paymentMethodRepo.deleteMethod(method.methodId)),
+    );
+  }
+
   private buildMethodChangeApprovalUrl(): string {
     const approvalUrl = new URL(
       this.configService.get('KAKAOPAY_APPROVAL_URL'),
@@ -768,6 +798,13 @@ export class PaymentsService {
       throw new ENotFoundException({
         message: '결제 정보를 찾을 수 없습니다.',
         errorCode: ERROR_CODE.PAYMENT_NOT_FOUND,
+      });
+    }
+
+    if (payment.status !== PaymentStatus.READY) {
+      throw new EBadRequestException({
+        message: '처리 가능한 결제 상태가 아닙니다.',
+        errorCode: ERROR_CODE.PAYMENT_NOT_READY,
       });
     }
 

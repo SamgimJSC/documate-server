@@ -9,6 +9,7 @@ import { TypeOrmPaymentRepository } from './model/payment.repository';
 import { KakaoPayProvider } from './providers/kakao-pay.provider';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { UsersModule } from '../users/users.module';
+import { SubscriptionBillingScheduler } from './subscription-billing.scheduler';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from '../users/users.module';
     KakaoPayProvider,
     TypeOrmPaymentMethodRepository,
     TypeOrmPaymentRepository,
+    SubscriptionBillingScheduler,
   ],
 })
 export class PaymentsModule {}

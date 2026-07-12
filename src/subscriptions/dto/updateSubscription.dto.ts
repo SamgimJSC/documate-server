@@ -9,4 +9,5 @@ export class UpdateSubscriptionDto {
   isCanceled?: boolean;
   canceledAt?: Date | null;
   trialEndAt?: Date | null;
+  failedAttemptCount?: number;
 }

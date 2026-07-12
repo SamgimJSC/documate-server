@@ -13,11 +13,13 @@ export const KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX =
 export const KAKAOPAY_DISPLAY_NAME = '카카오페이';
 
 export const PRO_PLAN_AMOUNT: Record<BillingCycle, number> = {
-  [BillingCycle.MONTHLY]: 100,
-  [BillingCycle.YEARLY]: 100,
+  [BillingCycle.MONTHLY]: 3900,
+  [BillingCycle.YEARLY]: 3900,
 };
 
 export const KAKAOPAY_DEFAULT_QUANTITY = 1;
 export const KAKAOPAY_TAX_FREE_AMOUNT = 0;
 
 export const BILLING_KEY_CRYPTO_VERSION = 'v1';
+
+export const MAX_BILLING_FAILURE_COUNT = 3;

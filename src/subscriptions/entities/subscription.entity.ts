@@ -39,6 +39,9 @@ export class Subscription {
   @Column({ name: 'trial_end_at', type: 'timestamptz', nullable: true })
   trialEndAt: Date | null;
 
+  @Column({ name: 'failed_attempt_count', type: 'int', default: 0 })
+  failedAttemptCount: number;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
