@@ -35,6 +35,9 @@ export type EnvConfigType = {
   KAKAOPAY_APPROVAL_URL: string;
   KAKAOPAY_CANCEL_URL: string;
   KAKAOPAY_FAIL_URL: string;
+  FRONTEND_PAYMENT_SUCCESS_URL?: string;
+  FRONTEND_PAYMENT_CANCEL_URL?: string;
+  FRONTEND_PAYMENT_FAIL_URL?: string;
 
   PAYMENT_BILLING_KEY_SECRET: string;
 };

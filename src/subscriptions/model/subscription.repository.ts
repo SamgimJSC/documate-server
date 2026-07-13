@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, LessThanOrEqual, Repository } from 'typeorm';
 
 import { Subscription } from '../entities/subscription.entity';
 import { SubscriptionRepository } from './subscription.interface';
 import { CreateSubscriptionDto } from '../dto/createSubscription.dto';
 import { UpdateSubscriptionDto } from '../dto/updateSubscription.dto';
 import { SubscriptionStatus } from '../../global/constants/subscriptionStatus.enum';
+import { BillingCycle } from '../../global/constants/billingCycle.enum';
 
 @Injectable()
 export class TypeOrmSubscriptionRepository implements SubscriptionRepository {
@@ -39,6 +40,17 @@ export class TypeOrmSubscriptionRepository implements SubscriptionRepository {
     return this.repo.find({
       where: { userId },
       order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findMonthlyBillingTargets(now: Date): Promise<Subscription[]> {
+    return this.repo.find({
+      where: {
+        status: SubscriptionStatus.ACTIVE,
+        billingCycle: BillingCycle.MONTHLY,
+        currentPeriodEnd: LessThanOrEqual(now),
+      },
+      order: { currentPeriodEnd: 'ASC' },
     });
   }
 

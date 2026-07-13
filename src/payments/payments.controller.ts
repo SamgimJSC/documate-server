@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { type Response } from 'express';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { type ReqUser } from '../global/types/express';
@@ -27,23 +36,89 @@ export class PaymentsController {
   }
 
   @Get('kakao/approve')
-  approveKakaoPayment(@Query() query: KakaoApproveQueryDto) {
-    return this.paymentsService.approveKakaoPayment(query);
+  async approveKakaoPayment(
+    @Query() query: KakaoApproveQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.paymentsService.approveKakaoPayment(query);
+    const redirectUrl = this.paymentsService.buildFrontendPaymentRedirectUrl(
+      'success',
+      {
+        flow: 'SUBSCRIPTION',
+        paymentId: result.paymentId,
+        subscriptionId: result.subscriptionId,
+        methodId: result.methodId,
+        status: result.status,
+        approvedAt: result.approvedAt,
+      },
+    );
+
+    if (this.redirectToFrontend(res, redirectUrl)) return;
+
+    return result;
   }
 
   @Get('kakao/method-change/approve')
-  approveKakaoMethodChange(@Query() query: KakaoApproveQueryDto) {
-    return this.paymentsService.approveKakaoMethodChange(query);
+  async approveKakaoMethodChange(
+    @Query() query: KakaoApproveQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.paymentsService.approveKakaoMethodChange(query);
+    const redirectUrl = this.paymentsService.buildFrontendPaymentRedirectUrl(
+      'success',
+      {
+        flow: 'METHOD_CHANGE',
+        paymentId: result.paymentId,
+        subscriptionId: result.subscriptionId,
+        methodId: result.methodId,
+        status: result.status,
+        approvedAt: result.approvedAt,
+      },
+    );
+
+    if (this.redirectToFrontend(res, redirectUrl)) return;
+
+    return result;
   }
 
   @Get('kakao/cancel')
-  cancelKakaoPayment(@Query() query: KakaoResultQueryDto) {
-    return this.paymentsService.cancelKakaoPayment(query);
+  async cancelKakaoPayment(
+    @Query() query: KakaoResultQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.paymentsService.cancelKakaoPayment(query);
+    const redirectUrl = this.paymentsService.buildFrontendPaymentRedirectUrl(
+      'cancel',
+      {
+        paymentId: result.paymentId,
+        status: result.status,
+        reason: result.reason,
+      },
+    );
+
+    if (this.redirectToFrontend(res, redirectUrl)) return;
+
+    return result;
   }
 
   @Get('kakao/fail')
-  failKakaoPayment(@Query() query: KakaoResultQueryDto) {
-    return this.paymentsService.failKakaoPayment(query);
+  async failKakaoPayment(
+    @Query() query: KakaoResultQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.paymentsService.failKakaoPayment(query);
+    const redirectUrl = this.paymentsService.buildFrontendPaymentRedirectUrl(
+      'fail',
+      {
+        paymentId: result.paymentId,
+        status: result.status,
+        reason: result.reason,
+      },
+    );
+
+    if (this.redirectToFrontend(res, redirectUrl)) return;
+
+    return result;
   }
 
   @Get()
@@ -53,5 +128,18 @@ export class PaymentsController {
     @Query() query: GetPaymentsQueryDto,
   ) {
     return this.paymentsService.getMyPayments(user.userId, query);
+  }
+
+  @Post('kakao/subscriptions/billing/run')
+  @UseGuards(JwtAuthGuard)
+  runMonthlySubscriptionBillingManually() {
+    return this.paymentsService.runMonthlySubscriptionBillingManually();
+  }
+
+  private redirectToFrontend(res: Response, redirectUrl: string | null) {
+    if (!redirectUrl) return false;
+
+    res.redirect(redirectUrl);
+    return true;
   }
 }

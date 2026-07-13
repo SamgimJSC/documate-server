@@ -2,6 +2,8 @@ import { BillingCycle } from '../../global/constants/billingCycle.enum';
 
 export const KAKAOPAY_READY_PATH = '/online/v1/payment/ready';
 export const KAKAOPAY_APPROVE_PATH = '/online/v1/payment/approve';
+export const KAKAOPAY_SUBSCRIPTION_PATH =
+  '/online/v1/payment/subscription';
 
 export const PRO_PLAN_ITEM_NAME = 'DocuMate PRO';
 export const KAKAOPAY_METHOD_CHANGE_ITEM_NAME =
@@ -11,11 +13,15 @@ export const KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX =
 export const KAKAOPAY_DISPLAY_NAME = '카카오페이';
 
 export const PRO_PLAN_AMOUNT: Record<BillingCycle, number> = {
-  [BillingCycle.MONTHLY]: 0,
-  [BillingCycle.YEARLY]: 0,
+  [BillingCycle.MONTHLY]: 3900,
+  [BillingCycle.YEARLY]: 3900,
 };
+
+export const KAKAOPAY_METHOD_CHANGE_AMOUNT = 0;
 
 export const KAKAOPAY_DEFAULT_QUANTITY = 1;
 export const KAKAOPAY_TAX_FREE_AMOUNT = 0;
 
 export const BILLING_KEY_CRYPTO_VERSION = 'v1';
+
+export const MAX_BILLING_FAILURE_COUNT = 3;

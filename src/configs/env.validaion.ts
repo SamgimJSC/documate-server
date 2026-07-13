@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   Max,
   Min,
@@ -83,6 +84,18 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   KAKAOPAY_FAIL_URL: string;
+
+  @IsString()
+  @IsOptional()
+  FRONTEND_PAYMENT_SUCCESS_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  FRONTEND_PAYMENT_CANCEL_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  FRONTEND_PAYMENT_FAIL_URL?: string;
 
   @IsString()
   @MinLength(32)
