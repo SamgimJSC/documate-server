@@ -15,9 +15,12 @@ import { NotificationsService } from './notifications.service';
 import { NotificationScheduler } from './notification.scheduler';
 import { CreateNotificationBodyDto } from './dto/createNotificationBody.dto';
 import { RegisterDeviceTokenDto } from './dto/registerDeviceToken.dto';
+import { BroadcastNotificationDto } from './dto/broadcastNotification.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DecoUser } from '../global/decorators/decoUser.decorator';
 import { type ReqUser } from '../global/types/express';
+import { FcmService } from './providers/fcm.service';
+import { FCM_TOPIC_ALL_USERS } from '../global/constants/fcmTopic.const';
 
 /*
   알림 API
@@ -35,6 +38,7 @@ export class NotificationsController {
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly notificationScheduler: NotificationScheduler,
+    private readonly fcmService: FcmService,
   ) {}
 
   // ====================================================================
@@ -104,6 +108,22 @@ export class NotificationsController {
   async triggerScheduler() {
     await this.notificationScheduler.dispatchDueAlerts();
     return { triggered: true };
+  }
+
+  // ====================================================================
+  // POST /notifications/broadcast
+  // 전체공지 발송 (토픽 브로드캐스트 실험용)
+  // - device-tokens 등록 시 자동 구독된 FCM_TOPIC_ALL_USERS 토픽으로 1건 발송
+  // - 개인 알림함(notifications 테이블)에는 기록되지 않음, 푸시만 나감
+  // ====================================================================
+  @Post('broadcast')
+  async broadcastNotification(@Body() body: BroadcastNotificationDto) {
+    await this.fcmService.sendToTopic({
+      topic: FCM_TOPIC_ALL_USERS,
+      title: body.title,
+      body: body.body ?? '',
+    });
+    return { broadcasted: true };
   }
 
   // ====================================================================

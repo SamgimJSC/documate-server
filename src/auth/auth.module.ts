@@ -15,7 +15,13 @@ import { NodeMailer } from './providors/nodeMailer';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { BiometricChallenge } from './entities/biometric-challenge.entity';
 import { TypeOrmBiometricChallengeRepository } from './model/biometric-challenge.repository';
+import { FcmService } from '../notifications/providers/fcm.service';
 
+/*
+  FcmService는 NotificationsModule에서도 provide 되지만,
+  NotificationsModule → AuthModule을 import하고 있어 순환 참조를 피하려고
+  여기서 별도로 provide한다. (stateless, firebase-admin SDK는 전역 싱글톤이라 중복 provide해도 안전)
+*/
 @Module({
   imports: [
     TypeOrmModule.forFeature([EmailVerification, AuthToken, DeviceToken, BiometricChallenge]),
@@ -37,6 +43,7 @@ import { TypeOrmBiometricChallengeRepository } from './model/biometric-challenge
     TypeOrmEmailVerificationRepository,
     TypeOrmAuthTokenRepository,
     TypeOrmBiometricChallengeRepository,
+    FcmService,
   ],
   exports: [AuthService, JwtModule, JwtAuthGuard, NodeMailer],
 })

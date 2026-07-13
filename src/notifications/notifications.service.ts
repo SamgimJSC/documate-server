@@ -9,6 +9,8 @@ import { RegisterDeviceTokenDto } from './dto/registerDeviceToken.dto';
 import { Notification } from './entities/notification.entity';
 import { ENotFoundException } from '../global/exceptions/ENotFoundException';
 import { ERROR_CODE } from '../global/constants/errorCode.const';
+import { FCM_TOPIC_ALL_USERS } from '../global/constants/fcmTopic.const';
+import { FcmService } from './providers/fcm.service';
 
 /*
   알림 비즈니스 로직 담당
@@ -25,6 +27,7 @@ export class NotificationsService {
     // 디바이스 토큰 테이블(device_tokens) 접근
     @Inject(TypeOrmDeviceTokenRepository)
     private readonly deviceTokenRepo: DeviceTokenRepository,
+    private readonly fcmService: FcmService,
   ) {}
 
   // ====================================================================
@@ -115,7 +118,14 @@ export class NotificationsService {
       await this.deviceTokenRepo.deactivateToken(existing.tokenId);
     }
 
-    return this.deviceTokenRepo.createToken({ userId, ...dto });
+    const created = await this.deviceTokenRepo.createToken({
+      userId,
+      ...dto,
+    });
+
+    await this.fcmService.subscribeToTopic([dto.token], FCM_TOPIC_ALL_USERS);
+
+    return created;
   }
 
   /*
@@ -135,5 +145,10 @@ export class NotificationsService {
     }
 
     await this.deviceTokenRepo.deactivateToken(tokenId);
+
+    await this.fcmService.unsubscribeFromTopic(
+      [target.token],
+      FCM_TOPIC_ALL_USERS,
+    );
   }
 }
