@@ -14,6 +14,7 @@ import {
 import { KakaoReadyDto } from './dto/kakaoReady.dto';
 import {
   KAKAOPAY_DISPLAY_NAME,
+  KAKAOPAY_METHOD_CHANGE_AMOUNT,
   KAKAOPAY_METHOD_CHANGE_APPROVAL_SUFFIX,
   KAKAOPAY_METHOD_CHANGE_ITEM_NAME,
   MAX_BILLING_FAILURE_COUNT,
@@ -136,7 +137,7 @@ export class PaymentsService {
       });
     }
 
-    const amount = PRO_PLAN_AMOUNT[BillingCycle.MONTHLY];
+    const amount = KAKAOPAY_METHOD_CHANGE_AMOUNT;
     const payment = await this.paymentRepo.createPayment({
       userId,
       subscriptionId: subscription.subscriptionId,
@@ -442,7 +443,9 @@ export class PaymentsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const payments = (await this.paymentRepo.findByUserId(userId)).filter(
-      (payment) => payment.status !== PaymentStatus.READY,
+      (payment) =>
+        payment.status !== PaymentStatus.READY &&
+        Number(payment.amount) !== 0,
     );
     const start = (page - 1) * limit;
     const items = payments.slice(start, start + limit);

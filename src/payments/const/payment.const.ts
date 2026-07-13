@@ -17,6 +17,8 @@ export const PRO_PLAN_AMOUNT: Record<BillingCycle, number> = {
   [BillingCycle.YEARLY]: 3900,
 };
 
+export const KAKAOPAY_METHOD_CHANGE_AMOUNT = 0;
+
 export const KAKAOPAY_DEFAULT_QUANTITY = 1;
 export const KAKAOPAY_TAX_FREE_AMOUNT = 0;
 
