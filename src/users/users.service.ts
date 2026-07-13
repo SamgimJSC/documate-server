@@ -16,12 +16,17 @@ import { TypeOrmUserSecurityRepository } from './model/user-security.repository'
 import { type UserSecurityRepository } from './model/user-security.interface';
 import { TypeOrmUserSettingsRepository } from './model/user-settings.repository';
 import { type UserSettingsRepository } from './model/user-settings.interface';
+import { TypeOrmUserConsentRepository } from './model/user-consent.repository';
+import { type UserConsentRepository } from './model/user-consent.interface';
+import type { UpdateUserConsentRequestDto } from './dto/updateUserConsentRequest.dto';
 import { Transactional } from 'typeorm-transactional';
 import * as bcrypt from 'bcrypt';
 import { rNickname } from '../global/reg';
 import type { BiometricType } from '../global/constants/biometricType.enum';
 import { PIN_MAX_FAILED_ATTEMPTS } from '../global/constants/pin.const';
 import { UserPlan } from '../global/constants/userPlan.enum';
+import { ConsentType } from '../global/constants/consentType.enum';
+import { DEFAULT_USER_CONSENTS } from './const/consent.const';
 
 @Injectable()
 export class UsersService {
@@ -32,6 +37,8 @@ export class UsersService {
     private readonly userSecurityRepo: UserSecurityRepository,
     @Inject(TypeOrmUserSettingsRepository)
     private readonly userSettingsRepo: UserSettingsRepository,
+    @Inject(TypeOrmUserConsentRepository)
+    private readonly userConsentRepo: UserConsentRepository,
   ) {}
 
   async getUsers(query: GetUsersQueryDto) {
@@ -154,6 +161,65 @@ export class UsersService {
         message: '사용자 설정을 찾을 수 없습니다.',
         errorCode: ERROR_CODE.USER_NOT_FOUND,
       });
+
+    return updated;
+  }
+
+  private async ensureDefaultConsents(userId: string) {
+    const consents = await this.userConsentRepo.findByUserId(userId);
+    if (consents.length > 0) return consents;
+
+    return this.userConsentRepo.bulkUpsert(
+      userId,
+      DEFAULT_USER_CONSENTS.map((consent) => ({
+        userId,
+        consentType: consent.consentType,
+        isRequired: consent.isRequired,
+        isAgreed: false,
+        agreedAt: null,
+      })),
+    );
+  }
+
+  async getUserConsents(userId: string) {
+    return this.ensureDefaultConsents(userId);
+  }
+
+  @Transactional()
+  async updateUserConsent(
+    userId: string,
+    consentType: ConsentType,
+    dto: UpdateUserConsentRequestDto,
+  ) {
+    const isRequiredType =
+      consentType === ConsentType.TERMS || consentType === ConsentType.PRIVACY;
+
+    if (isRequiredType && !dto.isAgreed) {
+      throw new EBadRequestException({
+        message: '필수 동의 항목은 철회할 수 없습니다.',
+        errorCode: ERROR_CODE.REQUIRED_CONSENT_CANNOT_DISAGREE,
+      });
+    }
+
+    await this.ensureDefaultConsents(userId);
+
+    const updated = await this.userConsentRepo.updateConsent(
+      userId,
+      consentType,
+      { isAgreed: dto.isAgreed, agreedAt: dto.isAgreed ? new Date() : null },
+    );
+
+    if (!updated)
+      throw new ENotFoundException({
+        message: '동의 항목을 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.CONSENT_NOT_FOUND,
+      });
+
+    if (consentType === ConsentType.MARKETING && !dto.isAgreed) {
+      await this.userSettingsRepo.updateSettings(userId, {
+        pushEnabled: false,
+      });
+    }
 
     return updated;
   }
