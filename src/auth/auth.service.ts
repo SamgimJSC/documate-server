@@ -37,6 +37,8 @@ import { BiometricVerifyDto } from './dto/biometricVerify.dto';
 import { type BiometricChallengeRepository } from './model/biometric-challenge.interface';
 import { TypeOrmBiometricChallengeRepository } from './model/biometric-challenge.repository';
 import { PIN_MAX_FAILED_ATTEMPTS } from '../global/constants/pin.const';
+import { FcmService } from '../notifications/providers/fcm.service';
+import { FCM_TOPIC_ALL_USERS } from '../global/constants/fcmTopic.const';
 
 @Injectable()
 export class AuthService {
@@ -53,6 +55,7 @@ export class AuthService {
     private readonly configService: TypedConfigService,
     @InjectRepository(DeviceToken)
     private readonly deviceTokenRepo: Repository<DeviceToken>,
+    private readonly fcmService: FcmService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -419,6 +422,7 @@ export class AuthService {
   */
   async deactivateDeviceTokenByFcmString(token: string): Promise<void> {
     await this.deviceTokenRepo.update({ token }, { isActive: false });
+    await this.fcmService.unsubscribeFromTopic([token], FCM_TOPIC_ALL_USERS);
   }
 
   /*
@@ -447,6 +451,8 @@ export class AuthService {
       });
       await this.deviceTokenRepo.save(newToken);
     }
+
+    await this.fcmService.subscribeToTopic([token], FCM_TOPIC_ALL_USERS);
   }
 
   async setBiometric(userId: string, dto: BiometricEnableDto) {

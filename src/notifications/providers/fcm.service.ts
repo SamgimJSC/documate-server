@@ -110,4 +110,69 @@ export class FcmService implements OnModuleInit {
       failureCount: response.failureCount,
     };
   }
+
+  /*
+    디바이스 토큰들을 특정 토픽에 구독시킨다.
+    구독 상태는 FCM 쪽에서만 관리하고, 우리 DB에는 별도로 기록하지 않는다.
+  */
+  async subscribeToTopic(tokens: string[], topic: string): Promise<void> {
+    if (tokens.length === 0) return;
+
+    try {
+      await getMessaging().subscribeToTopic(tokens, topic);
+      this.logger.log(`토픽 구독 완료 topic=${topic} count=${tokens.length}`);
+    } catch (err) {
+      this.logger.error(
+        `토픽 구독 실패 topic=${topic}`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  /*
+    디바이스 토큰들을 특정 토픽에서 구독 해제한다.
+  */
+  async unsubscribeFromTopic(tokens: string[], topic: string): Promise<void> {
+    if (tokens.length === 0) return;
+
+    try {
+      await getMessaging().unsubscribeFromTopic(tokens, topic);
+      this.logger.log(
+        `토픽 구독 해제 완료 topic=${topic} count=${tokens.length}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `토픽 구독 해제 실패 topic=${topic}`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  /*
+    토픽 구독자 전체에게 한 번에 발송 (전체공지 실험용)
+  */
+  async sendToTopic(params: {
+    topic: string;
+    title: string;
+    body: string;
+    data?: Record<string, string>;
+  }): Promise<void> {
+    const { topic, title, body, data } = params;
+
+    try {
+      const messageId = await getMessaging().send({
+        topic,
+        notification: { title, body },
+        data,
+      });
+
+      this.logger.log(`토픽 발송 성공 topic=${topic} messageId=${messageId}`);
+    } catch (err) {
+      this.logger.error(
+        `토픽 발송 실패 topic=${topic}`,
+        err instanceof Error ? err.message : String(err),
+      );
+      throw err;
+    }
+  }
 }
