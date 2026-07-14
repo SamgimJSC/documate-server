@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 
 import { CardsService } from './cards.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -40,5 +40,15 @@ export class CardsController {
   @Get('ai')
   requestAi(@DecoUser() user: ReqUser) {
     return this.cardsService.requestAi(user.userId);
+  }
+
+  // ====================================================================
+  // GET /cards/:cardId
+  // 카드 상세보기 - benefits(상세 혜택) 포함 단건 조회
+  // 반드시 위 고정 경로(recommendation/check/ai)들보다 아래에 위치해야 함
+  // ====================================================================
+  @Get(':cardId')
+  getCardDetail(@Param('cardId') cardId: string) {
+    return this.cardsService.getCardDetail(cardId);
   }
 }
