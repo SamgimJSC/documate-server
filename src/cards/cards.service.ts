@@ -8,6 +8,8 @@ import { TypeOrmReceiptRepository } from '../receipts/model/receipt.repository';
 import { Card } from '../admin/entities/card.entity';
 import { CardRecommendation } from '../admin/entities/card-recommendation.entity';
 import { DEFAULT_CARD_NAMES } from './const/cards.const';
+import { ENotFoundException } from '../global/exceptions/ENotFoundException';
+import { ERROR_CODE } from '../global/constants/errorCode.const';
 
 /*
   카드 추천 API 서비스
@@ -57,6 +59,18 @@ export class CardsService {
     return { status: 'queued', queue: CARD_QUEUE_KEY };
   }
 
+  // GET /cards/:cardId — 상세보기용 카드 단건 조회 (benefits 포함)
+  async getCardDetail(cardId: string) {
+    const card = await this.cardRepo.findByCardId(cardId);
+    if (!card) {
+      throw new ENotFoundException({
+        message: '카드를 찾을 수 없습니다.',
+        errorCode: ERROR_CODE.CARD_NOT_FOUND,
+      });
+    }
+    return this.toCardDetailJson(card);
+  }
+
   private toCardJson(card: Card) {
     return {
       cardId: card.cardId,
@@ -64,6 +78,18 @@ export class CardsService {
       issuer: card.issuer,
       annualFee: this.toNumber(card.annualFee),
       imgUrl: card.imgUrl,
+    };
+  }
+
+  private toCardDetailJson(card: Card) {
+    return {
+      cardId: card.cardId,
+      cardName: card.cardName,
+      issuer: card.issuer,
+      annualFee: this.toNumber(card.annualFee),
+      imgUrl: card.imgUrl,
+      sourceUrl: card.sourceUrl,
+      benefits: card.benefits,
     };
   }
 
