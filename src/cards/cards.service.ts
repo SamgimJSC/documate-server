@@ -55,6 +55,14 @@ export class CardsService {
 
   // GET /cards/ai — AI 추천 작업을 card:queue 에 넣는다 (파이썬 워커가 BLPOP)
   async requestAi(userId: string) {
+    const hasReceipt = await this.receiptRepo.existsByUserId(userId);
+    if (!hasReceipt) {
+      throw new ENotFoundException({
+        message: '분석할 영수증이 없습니다.',
+        errorCode: ERROR_CODE.RECEIPT_NOT_FOUND,
+      });
+    }
+
     await this.redis.rpush(CARD_QUEUE_KEY, JSON.stringify({ userId }));
     return { status: 'queued', queue: CARD_QUEUE_KEY };
   }

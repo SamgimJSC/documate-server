@@ -39,7 +39,6 @@ export interface ReceiptRepository {
     receiptId: string,
     dto: UpdateReceiptDto,
   ): Promise<Receipt | null>;
-  softDeleteReceipt(receiptId: string): Promise<boolean>;
   findByReceiptIdWithCategory(receiptId: string): Promise<Receipt | null>;
 
   // 목록 조회 (검색/필터/정렬/페이지네이션)

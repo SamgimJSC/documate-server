@@ -14,15 +14,8 @@ from app.repositories import (
 
 log = logging.getLogger(__name__)
 
-# spend_categories.name → 카드 benefits.categories 태그 매핑.
-# (크롤러 normalizer 의 _CATEGORY_KEYWORDS 태그와 일치시킨다)
-# 의료/기타는 대응하는 카드 혜택 태그가 없어 매칭에서 제외된다.
-SPEND_TO_BENEFIT_TAG: dict[str, str] = {
-    "식비": "food",
-    "카페": "cafe",
-    "교통": "transport",
-    "쇼핑": "shopping",
-}
+# spend_categories.name 이 곧 카드 benefits.categories 의 태그 이름이다.
+# (크롤러 normalizer 의 _CATEGORY_KEYWORDS 가 동일한 한글 이름으로 태깅함)
 
 
 def generate_recommendations(user_id: str) -> dict:
@@ -41,19 +34,16 @@ def generate_recommendations(user_id: str) -> dict:
         replace_recommendations(user_id, [])
         return {"user_id": user_id, "saved": 0, "reason": "no_cards"}
 
-    # 소비 태그별 가중치(금액)와, 태그 → 한글 카테고리명 매핑을 만든다.
+    # 카테고리(spend_categories.name)별 소비 가중치(금액)를 만든다.
     weight_by_tag: dict[str, int] = {}
-    tag_to_kor: dict[str, str] = {}
     for cid, amount in totals.items():
         name = category_names.get(cid)
-        tag = SPEND_TO_BENEFIT_TAG.get(name) if name else None
-        if tag:
-            weight_by_tag[tag] = weight_by_tag.get(tag, 0) + amount
-            tag_to_kor[tag] = name
+        if name:
+            weight_by_tag[name] = weight_by_tag.get(name, 0) + amount
 
     total_spend = sum(weight_by_tag.values())
 
-    scored = [_score_card(c, weight_by_tag, total_spend, tag_to_kor) for c in cards]
+    scored = [_score_card(c, weight_by_tag, total_spend) for c in cards]
     # 1순위 점수 내림차순, 2순위 연회비 오름차순(None 은 뒤로)
     scored.sort(key=lambda s: (-s["score"], _fee_key(s["annual_fee"])))
     top = scored[: settings.RECOMMEND_TOP_N]
@@ -94,7 +84,6 @@ def _score_card(
     card: dict,
     weight_by_tag: dict[str, int],
     total_spend: int,
-    tag_to_kor: dict[str, str],
 ) -> dict:
     benefits = card.get("benefits") or {}
     card_tags = set((benefits.get("categories") or {}).keys())
@@ -105,11 +94,8 @@ def _score_card(
     else:
         score = 0.0
 
-    # 매칭된 카테고리를 소비금액 큰 순으로 정렬해 사유 문장에 사용.
-    matched_kor = [
-        tag_to_kor[t]
-        for t in sorted(matched_tags, key=lambda t: weight_by_tag[t], reverse=True)
-    ]
+    # 매칭된 카테고리(이미 한글명)를 소비금액 큰 순으로 정렬해 사유 문장에 사용.
+    matched_kor = sorted(matched_tags, key=lambda t: weight_by_tag[t], reverse=True)
 
     return {
         "card_id": card["card_id"],

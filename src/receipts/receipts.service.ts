@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 
 import { TypeOrmReceiptRepository } from './model/receipt.repository';
 import { type ReceiptRepository } from './model/receipt.interface';
@@ -8,6 +9,7 @@ import { CreateReceiptRequestDto } from './dto/createReceiptRequest.dto';
 import { GetReceiptsQueryDto } from './dto/getReceiptsQuery.dto';
 import { UpdateReceiptRequestDto } from './dto/updateReceiptRequest.dto';
 import { Receipt } from './entities/receipt.entity';
+import { ReceiptTag } from './entities/receipt-tag.entity';
 import { AiStatus } from '../global/constants/aiStatus.enum';
 import { UsersService } from '../users/users.service';
 import { UploadsService } from '../uploads/uploads.service';
@@ -15,7 +17,10 @@ import { UploadTarget } from '../global/constants/uploadTarget.enum';
 
 @Injectable()
 export class ReceiptsService {
+  private readonly logger = new Logger(ReceiptsService.name);
+
   constructor(
+    private readonly dataSource: DataSource,
     @Inject(TypeOrmReceiptRepository)
     private readonly receiptRepo: ReceiptRepository,
     private readonly usersService: UsersService,
@@ -132,18 +137,35 @@ export class ReceiptsService {
   }
 
   /*
-    영수증 삭제 (소프트 삭제)
+    영수증 삭제 (하드 삭제 + S3 파일 삭제)
     - 본인 영수증만 삭제 가능
+    - documents.deleteDocument() 와 동일한 순서: DB 트랜잭션 커밋 후 S3 삭제
+      (S3를 먼저 지우면 트랜잭션 커밋 전까지 목록엔 남아있는데 이미지가 깨져 보이는 문제가 있어 이 순서로 함)
   */
   async removeReceipt(userId: string, receiptId: string): Promise<void> {
     const receipt = await this.getOwnedReceipt(userId, receiptId);
 
-    await this.receiptRepo.softDeleteReceipt(receiptId);
+    await this.dataSource.transaction(async (em) => {
+      await em.delete(ReceiptTag, { receiptId });
+      await em.delete(Receipt, { receiptId });
+    });
 
-    // 사용 용량에서 영수증 파일 크기만큼 차감 (음수 방지는 repository 에서 처리)
+    // 사용 용량에서 영수증 파일 크기만큼 차감 (음수 방지는 usersService 에서 처리)
     const bytes = Number(receipt.fileSizeBytes ?? 0);
     if (bytes > 0) {
       await this.usersService.subtractStorageUsedBytes(userId, bytes);
+    }
+
+    if (receipt.fileUrl) {
+      try {
+        await this.uploadsService.deleteS3File(receipt.fileUrl);
+      } catch (e) {
+        // S3 삭제 실패해도 DB는 이미 정상 삭제됨
+        this.logger.error(
+          `receipt S3 삭제 실패 (receiptId=${receiptId}, fileUrl=${receipt.fileUrl})`,
+          e instanceof Error ? e.stack : String(e),
+        );
+      }
     }
   }
 

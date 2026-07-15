@@ -21,6 +21,10 @@ def init_pool() -> None:
         kwargs={"prepare_threshold": None},
         min_size=1,
         max_size=settings.DB_POOL_SIZE,
+        # Supabase 풀러가 idle 커넥션을 서버 쪽에서 먼저 끊는 경우가 있어,
+        # 대여 시점에 살아있는지 확인하고 죽어있으면 자동으로 새 커넥션으로
+        # 교체한다 (psycopg_pool 제공 기본 체크 함수).
+        check=ConnectionPool.check_connection,
         open=True,
     )
 
