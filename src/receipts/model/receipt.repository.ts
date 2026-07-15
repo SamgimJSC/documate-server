@@ -48,15 +48,6 @@ export class TypeOrmReceiptRepository implements ReceiptRepository {
     return this.repo.save(receipt);
   }
 
-  async softDeleteReceipt(receiptId: string): Promise<boolean> {
-    const receipt = await this.findByReceiptId(receiptId);
-    if (!receipt) return false;
-
-    receipt.isDeleted = true;
-    await this.repo.save(receipt);
-    return true;
-  }
-
   /*
     상세 조회 — 영수증과 함께 카테고리 정보(spendCategory)까지 같이 가져옴.
     JOIN을 통해 categoryName/icon을 평탄화하기 위해 사용.
