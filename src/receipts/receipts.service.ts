@@ -116,20 +116,53 @@ export class ReceiptsService {
     영수증 수정 (PATCH)
     - 본인 영수증만 수정 가능
     - 시스템 관리 필드(ocrText, aiStatus 등)는 외부에서 변경 불가
+    - image가 전달되면 새 사진으로 업로드/교체 (기존 사진이 있었다면 DB 갱신 후 S3에서 삭제)
   */
   async updateReceipt(
     userId: string,
     receiptId: string,
     dto: UpdateReceiptRequestDto,
+    image?: Express.Multer.File,
   ) {
-    await this.getOwnedReceipt(userId, receiptId);
+    const receipt = await this.getOwnedReceipt(userId, receiptId);
 
     const updatePayload: Record<string, any> = { ...dto };
     if (dto.purchaseDate) {
       updatePayload.purchaseDate = new Date(dto.purchaseDate);
     }
 
+    const previousFileUrl = receipt.fileUrl;
+    const previousFileSizeBytes = Number(receipt.fileSizeBytes ?? 0);
+
+    if (image) {
+      const uploaded = await this.uploadsService.uploadFile(
+        userId,
+        image,
+        UploadTarget.RECEIPT,
+      );
+      updatePayload.fileUrl = uploaded.fileUrl;
+      updatePayload.fileSizeBytes = String(uploaded.fileSizeBytes);
+    }
+
     await this.receiptRepo.updateReceipt(receiptId, updatePayload);
+
+    // DB가 새 fileUrl로 갱신된 뒤에 기존 사진 정리 (목록에서 깨진 이미지로 보이는 것 방지)
+    if (image && previousFileUrl) {
+      if (previousFileSizeBytes > 0) {
+        await this.usersService.subtractStorageUsedBytes(
+          userId,
+          previousFileSizeBytes,
+        );
+      }
+      try {
+        await this.uploadsService.deleteS3File(previousFileUrl);
+      } catch (e) {
+        this.logger.error(
+          `receipt 기존 이미지 S3 삭제 실패 (receiptId=${receiptId}, fileUrl=${previousFileUrl})`,
+          e instanceof Error ? e.stack : String(e),
+        );
+      }
+    }
 
     const updated =
       await this.receiptRepo.findByReceiptIdWithCategory(receiptId);
