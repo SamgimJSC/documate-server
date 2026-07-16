@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import Redis from 'ioredis';
 import { TypedConfigService } from '../configs/typedConfig.service';
 import { AiStatus } from '../global/constants/aiStatus.enum';
@@ -30,6 +31,8 @@ import { ERROR_CODE } from '../global/constants/errorCode.const';
 import { RequestAiAnalyseDto } from './dto/requestAiAnalyse.dto';
 import { ReorderTempFilesDto } from './dto/reorderTempFiles.dto';
 import { UsersService } from '../users/users.service';
+import { Receipt } from '../receipts/entities/receipt.entity';
+import { DocumentFile } from '../documents/entities/document-file.entity';
 
 export interface TempFileItem {
   id: string;
@@ -61,6 +64,7 @@ export class UploadsService {
 
   constructor(
     private readonly configService: TypedConfigService,
+    private readonly dataSource: DataSource,
     private readonly tempDocumentRepo: TypeOrmTempDocumentRepository,
     private readonly tempFileRepo: TypeOrmTempFileRepository,
     private readonly usersService: UsersService,
@@ -453,13 +457,19 @@ export class UploadsService {
 
     await this.tempFileRepo.deleteById(fileId);
 
-    try {
-      await this.deleteS3File(tempFile.fileUrl);
-    } catch (e) {
-      this.logger.error(
-        `temp file S3 삭제 실패 (fileId=${fileId})`,
-        e instanceof Error ? e.stack : String(e),
+    if (await this.isFileUrlInUse(tempFile.fileUrl)) {
+      this.logger.warn(
+        `temp file S3 삭제 스킵 - 이미 저장된 문서/영수증이 참조 중 (fileId=${fileId})`,
       );
+    } else {
+      try {
+        await this.deleteS3File(tempFile.fileUrl);
+      } catch (e) {
+        this.logger.error(
+          `temp file S3 삭제 실패 (fileId=${fileId})`,
+          e instanceof Error ? e.stack : String(e),
+        );
+      }
     }
 
     const fileBytes = Number(tempFile.fileSizeBytes);
@@ -516,6 +526,12 @@ export class UploadsService {
     await this.tempFileRepo.deleteByTempDocumentId(tempDocumentId);
 
     for (const file of files) {
+      if (await this.isFileUrlInUse(file.fileUrl)) {
+        this.logger.warn(
+          `temp file S3 삭제 스킵 - 이미 저장된 문서/영수증이 참조 중 (fileId=${file.id})`,
+        );
+        continue;
+      }
       try {
         await this.deleteS3File(file.fileUrl);
       } catch (e) {
@@ -575,6 +591,23 @@ export class UploadsService {
     await this.s3.send(
       new DeleteObjectCommand({ Bucket: this.bucket, Key: fileKey }),
     );
+  }
+
+  /**
+   * temp 업로드 확정(AI 워커) 시 파일을 새 경로로 복사하지 않고 temp 의
+   * fileUrl 을 그대로 재사용하는 구조라, temp 정리 시 이미 저장된
+   * receipt/document 가 참조 중인 S3 객체까지 지워버릴 수 있다.
+   * S3 삭제 전에 같은 fileUrl 을 쓰는 저장된 레코드가 있는지 확인한다.
+   */
+  private async isFileUrlInUse(fileUrl: string): Promise<boolean> {
+    const [receiptExists, documentFileExists] = await Promise.all([
+      this.dataSource
+        .getRepository(Receipt)
+        .exists({ where: { fileUrl, isDeleted: false } }),
+      this.dataSource.getRepository(DocumentFile).exists({ where: { fileUrl } }),
+    ]);
+
+    return receiptExists || documentFileExists;
   }
   /**
    * 신규 업로드한 파일 용량만큼 users.storage_used_bytes 를 증분 갱신한다.
