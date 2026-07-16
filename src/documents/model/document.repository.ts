@@ -72,6 +72,7 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
       .leftJoinAndSelect('d.category', 'category')
       .leftJoinAndSelect('d.documentTags', 'dt')
       .leftJoinAndSelect('dt.tag', 'tag')
+      .leftJoinAndSelect('d.documentFiles', 'documentFiles')
       .where('d.userId = :userId', { userId })
 
     if (keyword) {
