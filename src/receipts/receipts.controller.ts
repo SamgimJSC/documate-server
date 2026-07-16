@@ -81,15 +81,27 @@ export class ReceiptsController {
 
   // ====================================================================
   // PATCH /receipts/:id
-  // 영수증 수정 (일부 필드만 보내도 OK)
+  // 영수증 수정 (일부 필드만 보내도 OK, 사진 첨부/교체 가능)
   // ====================================================================
   @Patch(':id')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+    }),
+  )
   updateReceipt(
     @DecoUser() user: ReqUser,
     @Param('id', ParseUUIDPipe) receiptId: string,
     @Body() body: UpdateReceiptRequestDto,
+    @UploadedFile() image?: Express.Multer.File,
   ) {
-    return this.receiptsService.updateReceipt(user.userId, receiptId, body);
+    return this.receiptsService.updateReceipt(
+      user.userId,
+      receiptId,
+      body,
+      image,
+    );
   }
 
   // ====================================================================
