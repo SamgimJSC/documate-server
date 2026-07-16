@@ -61,4 +61,33 @@ export class TypeOrmTempDocumentRepository implements TempDocumentRepository {
   async deleteById(tempDocumentId: string): Promise<void> {
     await this.repo.delete({ tempDocumentId });
   }
+
+  async markStaleAsFailed(
+    pendingTimeoutMinutes: number,
+    processingTimeoutMinutes: number,
+  ): Promise<number> {
+    const pendingCutoff = new Date(
+      Date.now() - pendingTimeoutMinutes * 60 * 1000,
+    );
+    const processingCutoff = new Date(
+      Date.now() - processingTimeoutMinutes * 60 * 1000,
+    );
+
+    const result = await this.repo
+      .createQueryBuilder()
+      .update(TempDocument)
+      .set({ aiStatus: AiStatus.FAILED })
+      .where(
+        '(ai_status = :pending AND created_at < :pendingCutoff) OR (ai_status = :processing AND created_at < :processingCutoff)',
+        {
+          pending: AiStatus.PENDING,
+          pendingCutoff,
+          processing: AiStatus.PROCESSING,
+          processingCutoff,
+        },
+      )
+      .execute();
+
+    return result.affected ?? 0;
+  }
 }
