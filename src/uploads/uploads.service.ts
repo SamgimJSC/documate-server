@@ -280,40 +280,6 @@ export class UploadsService {
     }));
   }
 
-  async getTempDocumentStatus(
-    userId: string,
-    tempDocumentId: string,
-  ): Promise<TempDocumentListItem> {
-    const tempDoc = await this.tempDocumentRepo.findById(tempDocumentId);
-    if (!tempDoc) {
-      throw new ENotFoundException({
-        message: '임시 문서를 찾을 수 없습니다.',
-        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_FOUND,
-      });
-    }
-    if (tempDoc.userId !== userId) {
-      throw new EForbiddenException({
-        message: '접근 권한이 없습니다.',
-        errorCode: ERROR_CODE.TEMP_DOCUMENT_NOT_OWNER,
-      });
-    }
-
-    const files = await this.tempFileRepo.findByTempDocumentId(tempDocumentId);
-
-    return {
-      tempDocumentId: tempDoc.tempDocumentId,
-      aiStatus: tempDoc.aiStatus,
-      createdAt: tempDoc.createdAt,
-      files: files.map((f) => ({
-        id: f.id,
-        fileUrl: f.fileUrl,
-        fileName: f.fileName,
-        pageNo: f.pageNo,
-        fileSizeBytes: f.fileSizeBytes,
-      })),
-    };
-  }
-
   async reorderTempFiles(
     userId: string,
     tempDocumentId: string,
