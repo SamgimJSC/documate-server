@@ -183,13 +183,22 @@ export class NotificationScheduler implements OnApplicationBootstrap {
 
     // 3) 이메일 발송
     // - 알림별 채널 설정(channelEmail) AND 유저 전역 설정(emailNotiEnabled) 모두 켜져야 발송
+    // - 실패해도 여기서 삼키고 넘어간다: 그렇지 않으면 4번(isSent 업데이트)에 도달하지 못해
+    //   다음 트리거 때마다 이미 성공한 푸시(2번)가 계속 중복 발송되는 문제가 있었음 (재발 사례 확인됨)
     const emailEnabled = userSettings?.emailNotiEnabled ?? true;
     if (emailEnabled && alert.channelEmail && alert.user?.email) {
-      await this.nodeMailer.sendAlertEmail({
-        to: alert.user.email,
-        subject: title,
-        html: this.nodeMailer.buildAlertEmailHtml(title, alert.reason, alert.notifyDate, alert.documentId),
-      });
+      try {
+        await this.nodeMailer.sendAlertEmail({
+          to: alert.user.email,
+          subject: title,
+          html: this.nodeMailer.buildAlertEmailHtml(title, alert.reason, alert.notifyDate, alert.documentId),
+        });
+      } catch (err) {
+        this.logger.error(
+          `이메일 발송 실패 (alertId=${alert.alertId})`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
     }
 
     // 4) 모든 채널 처리 완료 후 발송 완료 표시

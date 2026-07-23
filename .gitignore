@@ -447,3 +447,4 @@ firebase-service-account.json
 
 .vscode
 /local
+/venv
